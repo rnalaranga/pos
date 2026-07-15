@@ -85,16 +85,25 @@ export const createSale = async (req: any, res: Response) => {
       }
     }
 
-    // 3. Update Customer Loyalty Points & Balance
+    // 3. Update Customer Loyalty Points & Balance & Rating
     if (customer_id && status === 'Completed') {
       const netPoints = (loyalty_points_earned || 0) - (loyalty_points_used || 0);
-      let updateSql = 'UPDATE customers SET loyalty_points = loyalty_points + ?';
-      let params: any[] = [netPoints];
+      let updateSql = 'UPDATE customers SET loyalty_points = loyalty_points + ?, total_purchases = total_purchases + ?';
+      let params: any[] = [netPoints, total_amount];
 
       if (payment_method === 'Credit' && balance < 0) {
         updateSql += ', outstanding_balance = outstanding_balance + ?';
         params.push(Math.abs(balance)); // balance is negative when amount_paid < total_amount
       }
+
+      // Re-evaluate rating dynamically based on total_purchases
+      updateSql += `, rating = CASE 
+        WHEN total_purchases + ? >= 500000 THEN 'Platinum'
+        WHEN total_purchases + ? >= 100000 THEN 'Gold'
+        WHEN total_purchases + ? >= 50000 THEN 'Silver'
+        WHEN total_purchases + ? >= 10000 THEN 'Bronze'
+        ELSE 'Standard' END`;
+      params.push(total_amount, total_amount, total_amount, total_amount);
 
       updateSql += ' WHERE id = ?';
       params.push(customer_id);

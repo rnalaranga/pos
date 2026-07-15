@@ -14,8 +14,8 @@ export const createCustomer = async (req: Request, res: Response) => {
   const { name, phone, email, address, customer_type, credit_limit } = req.body;
   try {
     const [result]: any = await db.execute(
-      'INSERT INTO customers (name, phone, email, address, customer_type, credit_limit) VALUES (?, ?, ?, ?, ?, ?)',
-      [name, phone || null, email || null, address || null, customer_type || 'Walk-in', credit_limit || 0]
+      'INSERT INTO customers (name, phone, email, address, customer_type, credit_limit, total_purchases, rating) VALUES (?, ?, ?, ?, ?, ?, 0.00, ?)',
+      [name, phone || null, email || null, address || null, customer_type || 'Walk-in', credit_limit || 0, 'Standard']
     );
     res.status(201).json({ id: result.insertId, name });
   } catch (error) {

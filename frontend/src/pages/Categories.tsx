@@ -126,7 +126,7 @@ const Categories = () => {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="absolute inset-0 rounded-b-xl bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-card p-6 rounded-xl shadow-xl border border-border w-full max-w-md">
             <h2 className="text-xl font-bold mb-4">{editingId ? 'Edit Category' : 'Add Category'}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">

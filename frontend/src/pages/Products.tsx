@@ -195,7 +195,7 @@ const Products = () => {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="absolute inset-0 rounded-b-xl bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-card p-6 rounded-xl shadow-xl border border-border w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
             <h2 className="text-xl font-bold mb-6">{editingId ? 'Edit Product' : 'Add Product'}</h2>
             <form onSubmit={handleSubmit} className="space-y-6">

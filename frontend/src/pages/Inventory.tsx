@@ -244,7 +244,7 @@ const Inventory = () => {
       </div>
 
       {isTransferModalOpen && selectedProduct && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="absolute inset-0 rounded-b-xl bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-card p-6 rounded-xl shadow-xl border border-border w-full max-w-md">
             <h2 className="text-xl font-bold mb-2">Transfer Stock</h2>
             <p className="text-muted-foreground text-sm mb-6">Product: <span className="font-medium text-foreground">{selectedProduct.name}</span></p>

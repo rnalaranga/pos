@@ -142,7 +142,7 @@ const Warehouses = () => {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="absolute inset-0 rounded-b-xl bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b">
               <h2 className="text-xl font-bold">{editingId ? 'Edit' : 'Add'} Warehouse</h2>

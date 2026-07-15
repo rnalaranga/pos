@@ -30,6 +30,8 @@ export default {
         accent: { DEFAULT: "hsl(var(--accent))", foreground: "hsl(var(--accent-foreground))" },
         popover: { DEFAULT: "hsl(var(--popover))", foreground: "hsl(var(--popover-foreground))" },
         card: { DEFAULT: "hsl(var(--card))", foreground: "hsl(var(--card-foreground))" },
+        navy: { DEFAULT: "#0f172a", light: "#1e293b", dark: "#020617" },
+        gold: { DEFAULT: "#2B6BF3", light: "#3B82F6", dark: "#1D4ED8" },
       },
       borderRadius: {
         lg: "var(--radius)",

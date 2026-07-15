@@ -20,7 +20,10 @@ export interface CartItem extends Product {
 interface Customer {
   id: number;
   name: string;
+  phone?: string;
   loyalty_points: number;
+  rating?: 'Standard' | 'Bronze' | 'Silver' | 'Gold' | 'Platinum';
+  total_purchases?: number;
 }
 
 interface PosState {
@@ -29,6 +32,7 @@ interface PosState {
   customer: Customer | null;
   taxRate: number;
   globalDiscount: number;
+  customerDiscountPercentage: number;
   loyaltyPointsUsed: number;
   searchQuery: string;
   
@@ -46,6 +50,7 @@ interface PosState {
   updateCartItem: (productId: number, updates: Partial<CartItem>) => void;
   removeFromCart: (productId: number) => void;
   setGlobalDiscount: (amount: number) => void;
+  setCustomerDiscountPercentage: (pct: number) => void;
   setLoyaltyPointsUsed: (points: number) => void;
   clearCart: () => void;
   calculateTotals: () => void;
@@ -58,6 +63,7 @@ export const usePosStore = create<PosState>((set, get) => ({
   customer: null,
   taxRate: 0, // Should be loaded from settings
   globalDiscount: 0,
+  customerDiscountPercentage: 0,
   loyaltyPointsUsed: 0,
   searchQuery: '',
   subtotal: 0,
@@ -76,10 +82,23 @@ export const usePosStore = create<PosState>((set, get) => ({
 
   setSearchQuery: (query) => set({ searchQuery: query }),
   
-  setCustomer: (customer) => set({ customer }),
+  setCustomer: (customer) => {
+    let customerDiscountPercentage = 0;
+    if (customer?.rating) {
+      switch (customer.rating) {
+        case 'Bronze': customerDiscountPercentage = 2; break;
+        case 'Silver': customerDiscountPercentage = 5; break;
+        case 'Gold': customerDiscountPercentage = 10; break;
+        case 'Platinum': customerDiscountPercentage = 15; break;
+        default: customerDiscountPercentage = 0; break;
+      }
+    }
+    set({ customer, customerDiscountPercentage });
+    get().calculateTotals();
+  },
 
   calculateTotals: () => {
-    const { cart, taxRate, globalDiscount, loyaltyPointsUsed } = get();
+    const { cart, taxRate, globalDiscount, customerDiscountPercentage, loyaltyPointsUsed } = get();
     let newSubtotal = 0;
     
     cart.forEach(item => {
@@ -87,14 +106,15 @@ export const usePosStore = create<PosState>((set, get) => ({
     });
 
     const newTax = newSubtotal * (taxRate / 100);
+    const ratingDiscount = newSubtotal * (customerDiscountPercentage / 100);
     // Assuming 1 Loyalty Point = $1.00 discount for simplicity
     const loyaltyDiscount = loyaltyPointsUsed * 1.00;
-    const newGrandTotal = newSubtotal + newTax - globalDiscount - loyaltyDiscount;
+    const newGrandTotal = newSubtotal + newTax - globalDiscount - ratingDiscount - loyaltyDiscount;
 
     set({
       subtotal: newSubtotal,
       totalTax: newTax,
-      totalDiscount: globalDiscount + loyaltyDiscount,
+      totalDiscount: globalDiscount + ratingDiscount + loyaltyDiscount,
       grandTotal: newGrandTotal > 0 ? newGrandTotal : 0
     });
   },
@@ -143,6 +163,11 @@ export const usePosStore = create<PosState>((set, get) => ({
 
   setGlobalDiscount: (amount) => {
     set({ globalDiscount: amount });
+    get().calculateTotals();
+  },
+
+  setCustomerDiscountPercentage: (pct) => {
+    set({ customerDiscountPercentage: pct });
     get().calculateTotals();
   },
 

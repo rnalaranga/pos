@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Printer, FileText } from 'lucide-react';
 import api from '../../api/axios';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -131,12 +132,12 @@ export default function GRNPreviewModal({ grnId, onClose }: GRNPreviewModalProps
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
-      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-[10000] p-4">
+      <div className="bg-white border border-border rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="px-6 py-4 border-b flex justify-between items-center bg-muted/30">
+        <div className="px-6 py-4 border-b border-border flex justify-between items-center bg-muted/30">
           <h2 className="text-xl font-bold flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
             GRN Details
@@ -250,6 +251,7 @@ export default function GRNPreviewModal({ grnId, onClose }: GRNPreviewModalProps
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

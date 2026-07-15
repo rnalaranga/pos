@@ -345,7 +345,7 @@ const GRN = () => {
       </div>
 
       {isPaymentModalOpen && activeGrn && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 rounded-b-xl bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-card border shadow-lg rounded-xl w-full max-w-md animate-in fade-in zoom-in-95">
             <div className="flex justify-between items-center p-4 border-b">
               <h2 className="text-lg font-bold">Record Payment (Invoice: {activeGrn.reference_number})</h2>

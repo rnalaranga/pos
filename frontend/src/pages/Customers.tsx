@@ -1,6 +1,7 @@
 import { useDialogStore } from '../store/dialogStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, Edit, Trash2, Search, FileText, DollarSign } from 'lucide-react';
 import api from '../api/axios';
 
@@ -176,10 +177,10 @@ const Customers = () => {
         </div>
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-card p-6 rounded-xl shadow-xl border border-border w-full max-w-lg">
-            <h2 className="text-xl font-bold mb-6">{editingId ? 'Edit Customer' : 'Add Customer'}</h2>
+      {isModalOpen && createPortal(
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white p-6 rounded-2xl shadow-2xl border border-border w-full max-w-lg relative">
+            <h2 className="text-xl font-bold mb-6 text-foreground">{editingId ? 'Edit Customer' : 'Add Customer'}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div><label className="block text-sm font-medium mb-1">Name *</label><input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full h-10 px-3 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary" required /></div>
               <div className="grid grid-cols-2 gap-4">
@@ -201,18 +202,19 @@ const Customers = () => {
                 )}
               </div>
               <div className="mt-8 flex gap-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 h-12 bg-muted text-muted-foreground rounded-md hover:bg-muted-foreground hover:text-background transition-colors">Cancel</button>
-                <button type="submit" className="flex-1 h-12 bg-primary text-primary-foreground rounded-md font-bold hover:bg-primary/90 transition-colors">{editingId ? 'Update' : 'Save'}</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 h-12 btn-secondary">Cancel</button>
+                <button type="submit" className="flex-1 h-12 btn-primary">{editingId ? 'Update' : 'Save'}</button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {ledgerOpen && activeCustomer && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-          <div className="bg-card rounded-xl shadow-2xl border border-border w-full max-w-[95vw] h-[95vh] flex flex-col">
-            <div className="p-4 border-b border-border flex justify-between items-center bg-muted/30">
+      {ledgerOpen && activeCustomer && createPortal(
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-border w-full max-w-[95vw] h-[95vh] flex flex-col relative overflow-hidden">
+            <div className="p-4 border-b border-border flex justify-between items-center bg-muted/30 shrink-0">
               <h2 className="text-xl font-bold flex items-center gap-2">
                 <FileText className="h-5 w-5" /> 
                 Ledger: {activeCustomer.name}
@@ -249,8 +251,8 @@ const Customers = () => {
                 </table>
               </div>
 
-              <div className="w-full lg:w-[400px] p-6 bg-muted/10 border-l border-border flex flex-col">
-                <div className="bg-card border border-border rounded-lg p-6 mb-6 text-center shadow-sm">
+              <div className="w-full lg:w-[400px] p-6 bg-muted/20 border-l border-border flex flex-col">
+                <div className="bg-white border border-border rounded-xl p-6 mb-6 text-center shadow-sm">
                   <div className="text-sm text-muted-foreground uppercase tracking-wider mb-2 font-medium">Outstanding Balance</div>
                   <div className={`text-4xl font-bold ${Number(activeCustomer.outstanding_balance) > 0 ? 'text-destructive' : 'text-green-600'}`}>
                     {currencySymbol}{Number(activeCustomer.outstanding_balance).toFixed(2)}
@@ -282,7 +284,7 @@ const Customers = () => {
                     <input type="text" value={paymentRef} onChange={(e) => setPaymentRef(e.target.value)} className="w-full h-10 px-3 text-base rounded border border-input bg-background focus:ring-2 focus:ring-primary" />
                   </div>
                   <div className="pt-4 mt-auto">
-                    <button type="submit" className="w-full h-12 bg-green-600 text-white rounded-md font-bold text-lg hover:bg-green-700 transition-colors shadow-sm">
+                    <button type="submit" className="w-full h-12 btn-primary shadow-sm bg-green-600 hover:bg-green-700">
                       Record Payment
                     </button>
                   </div>
@@ -290,7 +292,8 @@ const Customers = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
