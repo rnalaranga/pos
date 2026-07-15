@@ -13,6 +13,8 @@ const Customers  = lazy(() => import('../../pages/Customers'));
 const Settings   = lazy(() => import('../../pages/Settings'));
 const Reports    = lazy(() => import('../../pages/Reports'));
 const Warehouses = lazy(() => import('../../pages/Warehouses'));
+const Users      = lazy(() => import('../../pages/Users'));
+const SalesHistory = lazy(() => import('../../pages/SalesHistory'));
 
 const Loading = () => (
   <div className="flex h-full items-center justify-center text-xs text-muted-foreground">Loading...</div>
@@ -30,6 +32,8 @@ const MODULE_COMPONENTS: Record<ModuleKey, React.ComponentType> = {
   settings:   Settings,
   reports:    Reports,
   warehouses: Warehouses,
+  users:      Users,
+  sales_history: SalesHistory,
 };
 
 export function ModuleRenderer({ module }: { module: ModuleKey }) {

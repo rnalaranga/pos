@@ -3,7 +3,7 @@ import { create } from 'zustand';
 export type ModuleKey = 
   | 'dashboard' | 'pos' | 'products' | 'categories' 
   | 'inventory' | 'grn' | 'suppliers' | 'customers' 
-  | 'settings' | 'reports' | 'warehouses';
+  | 'settings' | 'reports' | 'warehouses' | 'users' | 'sales_history';
 
 export interface WinState {
   id: string;
@@ -43,6 +43,8 @@ export const MODULE_REGISTRY: Record<ModuleKey, ModuleDef> = {
   warehouses: { title: 'Warehouses',             icon: '⌂',  defaultWidth: 850,  defaultHeight: 560, minWidth: 450, minHeight: 320 },
   settings:   { title: 'System Settings',        icon: '⚙',  defaultWidth: 780,  defaultHeight: 560, minWidth: 500, minHeight: 380 },
   reports:    { title: 'Reports',                icon: '▨',  defaultWidth: 950,  defaultHeight: 640, minWidth: 500, minHeight: 380 },
+  users:      { title: 'User Management',        icon: '👥', defaultWidth: 900,  defaultHeight: 600, minWidth: 600, minHeight: 400 },
+  sales_history: { title: 'Sales History',       icon: '🧾', defaultWidth: 1000, defaultHeight: 650, minWidth: 700, minHeight: 450 },
 };
 
 interface WindowStore {

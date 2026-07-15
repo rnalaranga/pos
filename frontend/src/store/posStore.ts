@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useSettingsStore } from './settingsStore';
 import api from '../api/axios';
 
 export interface Product {
@@ -99,6 +100,9 @@ export const usePosStore = create<PosState>((set, get) => ({
 
   calculateTotals: () => {
     const { cart, taxRate, globalDiscount, customerDiscountPercentage, loyaltyPointsUsed } = get();
+    const settings = useSettingsStore.getState().settings;
+    const pointValue = settings?.loyalty_point_value ? parseFloat(settings.loyalty_point_value) : 1;
+    
     let newSubtotal = 0;
     
     cart.forEach(item => {
@@ -107,8 +111,7 @@ export const usePosStore = create<PosState>((set, get) => ({
 
     const newTax = newSubtotal * (taxRate / 100);
     const ratingDiscount = newSubtotal * (customerDiscountPercentage / 100);
-    // Assuming 1 Loyalty Point = $1.00 discount for simplicity
-    const loyaltyDiscount = loyaltyPointsUsed * 1.00;
+    const loyaltyDiscount = loyaltyPointsUsed * pointValue;
     const newGrandTotal = newSubtotal + newTax - globalDiscount - ratingDiscount - loyaltyDiscount;
 
     set({

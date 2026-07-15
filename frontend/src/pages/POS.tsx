@@ -1,11 +1,19 @@
 import { useDialogStore } from '../store/dialogStore';
 import { useEffect, useRef, useState } from 'react';
-import { Search, UserPlus, Banknote, Trash2 } from 'lucide-react';
+import { Search, UserPlus, Banknote, Trash2, Star } from 'lucide-react';
 import { usePosStore, Product } from '../store/posStore';
 import { renderToString } from 'react-dom/server';
 import { Receipt80mm } from '../components/pos/Receipt';
 import api from '../api/axios';
 import { useSettingsStore } from '../store/settingsStore';
+
+const COLORS = {
+  Platinum: '#000000',
+  Gold: '#F59E0B',
+  Silver: '#9CA3AF',
+  Bronze: '#B45309',
+  Standard: '#3B82F6'
+};
 
 const POS = () => {
   const { 
@@ -37,7 +45,7 @@ const POS = () => {
   const [showNewCustomer, setShowNewCustomer] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', email: '' });
   const { customer, setCustomer, globalDiscount, setGlobalDiscount, loyaltyPointsUsed, setLoyaltyPointsUsed } = usePosStore();
-  const { currencySymbol } = useSettingsStore();
+  const { currencySymbol, settings } = useSettingsStore();
   
   const fetchCustomers = async () => {
     try {
@@ -334,17 +342,20 @@ const POS = () => {
       {/* LEFT SIDE - Product Search and Grid */}
       <div className="flex-[3] flex flex-col gap-4 relative min-w-0">
         <form onSubmit={handleSearchSubmit} className="relative shrink-0">
-          <Search className="absolute left-4 top-3.5 h-5 w-5 text-muted-foreground opacity-60" />
-          <input 
-            ref={searchInputRef}
-            type="text" 
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={handleSearchKeyDown}
-            placeholder="Search by Barcode, SKU, or Name (F1)" 
-            className="w-full h-12 pl-12 pr-4 text-lg rounded-full focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all bg-white border border-border shadow-sm text-foreground"
-            autoFocus
-          />
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent rounded-2xl blur-xl opacity-50"></div>
+          <div className="relative flex items-center">
+            <Search className="absolute left-4 h-6 w-6 text-primary/60" />
+            <input 
+              ref={searchInputRef}
+              type="text" 
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              placeholder="Search by Barcode, SKU, or Name (F1)" 
+              className="w-full h-14 pl-14 pr-4 text-lg rounded-2xl outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all bg-white/90 backdrop-blur-sm border border-transparent shadow-lg text-foreground font-medium placeholder:text-muted-foreground/60"
+              autoFocus
+            />
+          </div>
           
           {/* Autocomplete dropdown */}
           {filteredProducts.length > 0 && searchInput && (
@@ -501,9 +512,16 @@ const POS = () => {
                       }}
                     >
                       <div className="font-bold text-sm" style={{ color: '#26316C' }}>{c.name}</div>
-                      <div className="text-xs text-muted-foreground flex justify-between">
+                      <div className="text-xs text-muted-foreground flex justify-between items-center mt-1">
                         <span>{c.phone || 'No phone'}</span>
-                        {c.rating && <span className="font-bold text-primary">{c.rating}</span>}
+                        {c.rating && c.rating !== 'Standard' && (
+                          <span className="flex items-center gap-1 font-bold" style={{ color: (COLORS as any)[c.rating] }}>
+                            {c.rating} <Star className="h-3 w-3 fill-current" />
+                          </span>
+                        )}
+                        {c.rating === 'Standard' && (
+                          <span className="text-muted-foreground/70 font-medium">{c.rating}</span>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -513,19 +531,21 @@ const POS = () => {
         </div>
 
         {/* Totals */}
-        <div className="rounded-2xl p-5 flex flex-col shrink-0 bg-white border border-border shadow-sm">
-          <div className="space-y-4 font-semibold text-foreground">
-            <div className="flex justify-between items-center opacity-80 text-sm">
-              <span>Subtotal</span>
+        <div className="rounded-3xl p-5 flex flex-col shrink-0 bg-gradient-to-br from-primary/5 to-transparent border border-primary/10 shadow-lg relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+          
+          <div className="space-y-4 font-semibold text-foreground relative z-10">
+            <div className="flex justify-between items-center opacity-90 text-sm">
+              <span className="text-muted-foreground">Subtotal</span>
               <span className="font-bold text-lg">{currencySymbol}{subtotal.toFixed(2)}</span>
             </div>
             
             <div className="flex justify-between items-center">
-              <span className="text-sm font-bold opacity-80 flex items-center">
+              <span className="text-sm font-bold opacity-90 flex items-center text-muted-foreground">
                 Discount 
                 {customer?.rating && customer.rating !== 'Standard' && (
-                  <span className="ml-2 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full uppercase tracking-wider">
-                    {customer.rating} (-{usePosStore.getState().customerDiscountPercentage}%)
+                  <span className="ml-2 text-[10px] bg-primary text-primary-foreground px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
+                    <Star className="h-2.5 w-2.5 fill-current" /> {customer.rating} (-{usePosStore.getState().customerDiscountPercentage}%)
                   </span>
                 )}
               </span>
@@ -535,33 +555,55 @@ const POS = () => {
                   type="number" min="0" step="0.01" value={globalDiscount || ''}
                   placeholder="0.00"
                   onChange={(e) => setGlobalDiscount(parseFloat(e.target.value) || 0)}
-                  className="w-24 h-9 text-right rounded-lg focus:ring-2 focus:ring-primary/50 px-2 font-bold text-lg transition-all border border-border bg-muted/20" 
+                  className="w-24 h-9 text-right rounded-xl focus:ring-2 focus:ring-primary/50 px-2 font-bold text-lg transition-all border border-border bg-white shadow-inner text-primary" 
                 />
               </div>
             </div>
 
-            <div className="flex justify-between items-center opacity-80 text-xs">
-              <span>Pay with Points (1pt = {currencySymbol}1)</span>
-              <div className="flex items-center">
-                <span className="mr-2 text-muted-foreground font-bold">Pts</span>
-                <input 
-                  type="number" min="0" max={customer?.loyalty_points || 0} value={loyaltyPointsUsed || ''}
-                  placeholder="0"
-                  onChange={(e) => {
-                    let val = parseInt(e.target.value) || 0;
-                    if (val > (customer?.loyalty_points || 0)) val = customer?.loyalty_points || 0;
-                    setLoyaltyPointsUsed(val);
-                  }}
-                  disabled={!customer}
-                  className="w-20 h-7 text-right rounded-lg focus:ring-2 focus:ring-primary/50 px-2 font-bold transition-all disabled:opacity-40 border border-border bg-muted/20" 
-                />
+            <div className="flex flex-col gap-2 bg-primary/5 p-3 rounded-xl border border-primary/10">
+              <div className="flex justify-between items-center opacity-90 text-sm">
+                <span className="text-primary/80 font-bold flex flex-col">
+                  <span>Pay with Points</span>
+                  <span className="text-[10px] opacity-70">(1pt = {currencySymbol}{settings?.loyalty_point_value || 1})</span>
+                </span>
+                <div className="flex items-center">
+                  <span className="mr-2 text-primary font-bold text-xs bg-primary/10 px-2 py-1 rounded-md">PTS</span>
+                  <input 
+                    type="number" min="0" max={customer?.loyalty_points || 0} value={loyaltyPointsUsed || ''}
+                    placeholder="0"
+                    onChange={(e) => {
+                      let val = parseInt(e.target.value) || 0;
+                      if (val > (customer?.loyalty_points || 0)) val = customer?.loyalty_points || 0;
+                      
+                      const maxPercent = parseInt(settings?.loyalty_max_discount_percent) || 100;
+                      const baseTotal = subtotal + totalTax - globalDiscount - (subtotal * (usePosStore.getState().customerDiscountPercentage / 100));
+                      const maxDiscountVal = baseTotal * (maxPercent / 100);
+                      const pointVal = parseFloat(settings?.loyalty_point_value) || 1;
+                      const maxPointsAllowed = Math.floor(maxDiscountVal / pointVal);
+                      
+                      if (val > maxPointsAllowed) val = maxPointsAllowed;
+                      
+                      setLoyaltyPointsUsed(val);
+                    }}
+                    disabled={!customer || (customer.loyalty_points < (parseInt(settings?.loyalty_min_redeem) || 0))}
+                    className="w-24 h-9 text-right rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 px-2 font-bold transition-all disabled:opacity-40 border border-primary/20 bg-white shadow-sm text-primary" 
+                  />
+                </div>
               </div>
+              {customer && customer.loyalty_points < parseInt(settings?.loyalty_min_redeem || '0') && (
+                <div className="text-[10px] text-orange-500 font-bold bg-orange-500/10 px-2 py-1 rounded w-fit">
+                  Min redeemable: {settings?.loyalty_min_redeem} pts
+                </div>
+              )}
             </div>
           </div>
           
-          <div className="border-t border-border pt-3 mt-3 flex justify-between items-center">
-            <span className="font-bold text-xs tracking-wider text-muted-foreground">TOTAL</span>
-            <span className="text-3xl font-bold text-foreground">{currencySymbol}{grandTotal.toFixed(2)}</span>
+          <div className="border-t-2 border-dashed border-primary/20 pt-4 mt-4 flex justify-between items-end relative z-10">
+            <div className="flex flex-col">
+              <span className="font-bold text-xs tracking-widest text-primary/70">GRAND TOTAL</span>
+              <span className="text-[10px] text-muted-foreground uppercase mt-0.5">Includes Tax</span>
+            </div>
+            <span className="text-4xl font-black text-primary tracking-tight">{currencySymbol}{grandTotal.toFixed(2)}</span>
           </div>
         </div>
 

@@ -25,6 +25,24 @@ export const createSale = async (req: any, res: Response) => {
   try {
     await connection.beginTransaction();
 
+    // Fetch loyalty and rating settings
+    const [settingsRows]: any = await connection.execute('SELECT setting_key, setting_value FROM settings WHERE setting_key IN ("loyalty_points_per_amount", "rating_bronze_threshold", "rating_silver_threshold", "rating_gold_threshold", "rating_platinum_threshold")');
+    const settings: any = {
+      loyalty_points_per_amount: 100,
+      rating_bronze_threshold: 10000,
+      rating_silver_threshold: 50000,
+      rating_gold_threshold: 100000,
+      rating_platinum_threshold: 500000
+    };
+    for (const row of settingsRows) {
+      if (!isNaN(parseFloat(row.setting_value))) {
+        settings[row.setting_key] = parseFloat(row.setting_value);
+      }
+    }
+
+    // Calculate earned points based on settings
+    const points_earned = Math.floor(total_amount / (settings.loyalty_points_per_amount || 100));
+
     // 1. Create Sale Record
     const [saleResult]: any = await connection.execute(
       `INSERT INTO sales (
@@ -35,7 +53,7 @@ export const createSale = async (req: any, res: Response) => {
       [
         invoice_number, customer_id || null, user_id, subtotal, discount || 0, tax || 0,
         total_amount, payment_method, amount_paid, balance > 0 ? 0 : balance, status || 'Completed',
-        loyalty_points_used || 0, loyalty_points_earned || 0
+        loyalty_points_used || 0, points_earned
       ]
     );
 
@@ -87,7 +105,7 @@ export const createSale = async (req: any, res: Response) => {
 
     // 3. Update Customer Loyalty Points & Balance & Rating
     if (customer_id && status === 'Completed') {
-      const netPoints = (loyalty_points_earned || 0) - (loyalty_points_used || 0);
+      const netPoints = points_earned - (loyalty_points_used || 0);
       let updateSql = 'UPDATE customers SET loyalty_points = loyalty_points + ?, total_purchases = total_purchases + ?';
       let params: any[] = [netPoints, total_amount];
 
@@ -98,12 +116,17 @@ export const createSale = async (req: any, res: Response) => {
 
       // Re-evaluate rating dynamically based on total_purchases
       updateSql += `, rating = CASE 
-        WHEN total_purchases + ? >= 500000 THEN 'Platinum'
-        WHEN total_purchases + ? >= 100000 THEN 'Gold'
-        WHEN total_purchases + ? >= 50000 THEN 'Silver'
-        WHEN total_purchases + ? >= 10000 THEN 'Bronze'
+        WHEN total_purchases + ? >= ? THEN 'Platinum'
+        WHEN total_purchases + ? >= ? THEN 'Gold'
+        WHEN total_purchases + ? >= ? THEN 'Silver'
+        WHEN total_purchases + ? >= ? THEN 'Bronze'
         ELSE 'Standard' END`;
-      params.push(total_amount, total_amount, total_amount, total_amount);
+      params.push(
+        total_amount, settings.rating_platinum_threshold,
+        total_amount, settings.rating_gold_threshold,
+        total_amount, settings.rating_silver_threshold,
+        total_amount, settings.rating_bronze_threshold
+      );
 
       updateSql += ' WHERE id = ?';
       params.push(customer_id);
@@ -125,16 +148,48 @@ export const createSale = async (req: any, res: Response) => {
 
 export const getSales = async (req: Request, res: Response) => {
   try {
-    const [rows]: any = await db.execute(`
+    const { start_date, end_date, cashier_id, customer_id, min_amount, max_amount } = req.query;
+
+    let query = `
       SELECT s.*, u.full_name as cashier_name, c.name as customer_name
       FROM sales s
       LEFT JOIN users u ON s.user_id = u.id
       LEFT JOIN customers c ON s.customer_id = c.id
-      ORDER BY s.created_at DESC
-      LIMIT 100
-    `);
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+
+    if (start_date) {
+      query += ` AND s.created_at >= ?`;
+      params.push(`${start_date} 00:00:00`);
+    }
+    if (end_date) {
+      query += ` AND s.created_at <= ?`;
+      params.push(`${end_date} 23:59:59`);
+    }
+    if (cashier_id) {
+      query += ` AND s.user_id = ?`;
+      params.push(cashier_id);
+    }
+    if (customer_id) {
+      query += ` AND s.customer_id = ?`;
+      params.push(customer_id);
+    }
+    if (min_amount) {
+      query += ` AND s.total_amount >= ?`;
+      params.push(min_amount);
+    }
+    if (max_amount) {
+      query += ` AND s.total_amount <= ?`;
+      params.push(max_amount);
+    }
+
+    query += ` ORDER BY s.created_at DESC LIMIT 500`;
+
+    const [rows]: any = await db.execute(query, params);
     res.json(rows);
   } catch (error) {
+    console.error('Error fetching sales:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -163,6 +218,7 @@ export const getSaleById = async (req: Request, res: Response) => {
 
     res.json({ ...sales[0], items });
   } catch (error) {
+    console.error('Error fetching sale by id:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

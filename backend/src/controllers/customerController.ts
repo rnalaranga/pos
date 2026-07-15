@@ -101,3 +101,66 @@ export const getCustomerLedger = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+export const getCustomerAnalytics = async (req: Request, res: Response) => {
+  try {
+    // 1. Get rating distribution
+    const [ratingCounts]: any = await db.execute(`
+      SELECT rating, COUNT(*) as count 
+      FROM customers 
+      GROUP BY rating
+    `);
+
+    // 2. Get top 10 customers by total purchases
+    const [topCustomers]: any = await db.execute(`
+      SELECT id, name, total_purchases, loyalty_points, rating 
+      FROM customers 
+      ORDER BY total_purchases DESC 
+      LIMIT 10
+    `);
+
+    // 3. Get aggregate stats
+    const [[stats]]: any = await db.execute(`
+      SELECT 
+        COUNT(*) as totalCustomers,
+        SUM(loyalty_points) as totalPoints,
+        SUM(outstanding_balance) as totalOutstanding
+      FROM customers
+    `);
+
+    // 4. Get recent customer activity (sales)
+    const [recentActivity]: any = await db.execute(`
+      SELECT 
+        s.invoice_number, 
+        s.created_at, 
+        s.total_amount, 
+        s.loyalty_points_earned, 
+        s.loyalty_points_used,
+        c.name as customer_name
+      FROM sales s
+      JOIN customers c ON s.customer_id = c.id
+      ORDER BY s.created_at DESC
+      LIMIT 10
+    `);
+
+    // Format rating counts for Recharts PieChart (name, value)
+    const ratingDistribution = ratingCounts.map((r: any) => ({
+      name: r.rating || 'Standard',
+      value: r.count
+    }));
+
+    res.json({
+      ratingDistribution,
+      topCustomers,
+      stats: {
+        totalCustomers: stats.totalCustomers || 0,
+        totalPoints: stats.totalPoints || 0,
+        totalOutstanding: stats.totalOutstanding || 0
+      },
+      recentActivity
+    });
+  } catch (error) {
+    console.error('Error fetching customer analytics:', error);
+    res.status(500).json({ message: 'Server error while fetching analytics' });
+  }
+};
