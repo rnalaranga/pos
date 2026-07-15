@@ -93,19 +93,19 @@ const Users = () => {
   };
 
   const handleDelete = async (id: number, uname: string) => {
-    useDialogStore.getState().confirm(
+    const confirmed = await useDialogStore.getState().confirm(
       'Delete User',
-      `Are you sure you want to delete ${uname}?`,
-      async () => {
-        try {
-          await api.delete(`/users/${id}`);
-          fetchUsers();
-          useDialogStore.getState().alert('Success', 'User deleted');
-        } catch (err) {
-          useDialogStore.getState().alert('Error', 'Failed to delete user');
-        }
-      }
+      `Are you sure you want to delete ${uname}?`
     );
+    if (!confirmed) return;
+    
+    try {
+      await api.delete(`/users/${id}`);
+      fetchUsers();
+      useDialogStore.getState().alert('Success', 'User deleted');
+    } catch (err) {
+      useDialogStore.getState().alert('Error', 'Failed to delete user');
+    }
   };
 
   return (

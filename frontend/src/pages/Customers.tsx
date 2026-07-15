@@ -49,7 +49,7 @@ const Customers = () => {
     rating_platinum_threshold: '500000'
   });
 
-  const { currencySymbol, settings, fetchSettings, updateSettings } = useSettingsStore();
+  const { currencySymbol, settings, fetchSettings } = useSettingsStore();
 
   useEffect(() => {
     fetchData();
@@ -180,7 +180,8 @@ const Customers = () => {
   const handleSaveSetup = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await updateSettings(setupFormData);
+      await api.post('/settings', setupFormData);
+      await fetchSettings();
       useDialogStore.getState().alert('Success', 'Loyalty and Rating thresholds saved successfully!');
     } catch (err) {
       useDialogStore.getState().alert('Error', 'Failed to save settings.');

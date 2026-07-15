@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useDialogStore } from '../store/dialogStore';
-import { Search, Calendar, Filter, Receipt, Download, FileText } from 'lucide-react';
+import { Calendar, Filter, Download, FileText } from 'lucide-react';
 import api from '../api/axios';
 import { renderToString } from 'react-dom/server';
 import { Receipt80mm } from '../components/pos/Receipt';
