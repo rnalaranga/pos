@@ -12,34 +12,40 @@ export const getCategories = async (req: Request, res: Response) => {
 
 export const createCategory = async (req: Request, res: Response) => {
   const { name, description, icon, color_code, parent_id } = req.body;
+  
+  const parsedParentId = parent_id ? parseInt(parent_id, 10) : null;
+  
   try {
     const [result]: any = await db.execute(
       'INSERT INTO categories (name, description, icon, color_code, parent_id) VALUES (?, ?, ?, ?, ?)',
-      [name, description || null, icon || null, color_code || null, parent_id || null]
+      [name, description || null, icon || null, color_code || null, parsedParentId]
     );
-    res.status(201).json({ id: result.insertId, name, description, icon, color_code, parent_id });
+    res.status(201).json({ id: result.insertId, name, description, icon, color_code, parent_id: parsedParentId });
   } catch (error: any) {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ message: 'Category name already exists' });
     }
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 export const updateCategory = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { name, description, icon, color_code, parent_id } = req.body;
+  
+  const parsedParentId = parent_id ? parseInt(parent_id, 10) : null;
+  
   try {
     await db.execute(
       'UPDATE categories SET name = ?, description = ?, icon = ?, color_code = ?, parent_id = ? WHERE id = ?',
-      [name, description || null, icon || null, color_code || null, parent_id || null, id]
+      [name, description || null, icon || null, color_code || null, parsedParentId, id]
     );
     res.json({ message: 'Category updated successfully' });
   } catch (error: any) {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ message: 'Category name already exists' });
     }
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
