@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS customers (
     outstanding_balance DECIMAL(12,2) DEFAULT 0.00,
     total_purchases DECIMAL(12,2) DEFAULT 0.00,
     rating ENUM('Standard', 'Bronze', 'Silver', 'Gold', 'Platinum') DEFAULT 'Standard',
+    loyalty_points INT NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT NULL
 );
@@ -72,14 +73,12 @@ CREATE TABLE IF NOT EXISTS products (
     reorder_level INT NOT NULL DEFAULT 5,
     image_url VARCHAR(255),
     status ENUM('Active', 'Inactive') DEFAULT 'Active',
+    is_service BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT NULL,
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
     FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL
 );
-
--- Printing Services (Handled as special products or separate table, better to keep in products with a flag)
-ALTER TABLE products ADD COLUMN is_service BOOLEAN DEFAULT FALSE;
 
 -- Goods Received Notes (GRN)
 CREATE TABLE IF NOT EXISTS grn (
@@ -122,6 +121,8 @@ CREATE TABLE IF NOT EXISTS sales (
     payment_method ENUM('Cash', 'Card', 'QR', 'Credit', 'Mixed') NOT NULL,
     amount_paid DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     balance DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    loyalty_points_earned INT NOT NULL DEFAULT 0,
+    loyalty_points_used INT NOT NULL DEFAULT 0,
     status ENUM('Completed', 'Held', 'Cancelled', 'Returned') DEFAULT 'Completed',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT NULL,
@@ -182,11 +183,6 @@ INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
 ('currency_symbol', '$'),
 ('tax_rate', '0.00'),
 ('receipt_footer', 'Thank you for your business!');
-
--- Loyalty Points
-ALTER TABLE customers ADD COLUMN IF NOT EXISTS loyalty_points INT NOT NULL DEFAULT 0;
-ALTER TABLE sales ADD COLUMN IF NOT EXISTS loyalty_points_earned INT NOT NULL DEFAULT 0;
-ALTER TABLE sales ADD COLUMN IF NOT EXISTS loyalty_points_used INT NOT NULL DEFAULT 0;
 
 -- Supplier Payments
 CREATE TABLE IF NOT EXISTS supplier_payments (
