@@ -50,6 +50,8 @@ CREATE TABLE IF NOT EXISTS customers (
     customer_type ENUM('Walk-in', 'Registered', 'Credit') DEFAULT 'Walk-in',
     credit_limit DECIMAL(12,2) DEFAULT 0.00,
     outstanding_balance DECIMAL(12,2) DEFAULT 0.00,
+    total_purchases DECIMAL(12,2) DEFAULT 0.00,
+    rating ENUM('Standard', 'Bronze', 'Silver', 'Gold', 'Platinum') DEFAULT 'Standard',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT NULL
 );
