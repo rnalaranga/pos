@@ -32,7 +32,7 @@ export const updateCategory = async (req: Request, res: Response) => {
   try {
     await db.execute(
       'UPDATE categories SET name = ?, description = ?, icon = ?, color_code = ?, parent_id = ? WHERE id = ?',
-      [name, description, icon, color_code, parent_id || null, id]
+      [name, description || null, icon || null, color_code || null, parent_id || null, id]
     );
     res.json({ message: 'Category updated successfully' });
   } catch (error: any) {
