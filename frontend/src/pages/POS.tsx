@@ -202,12 +202,16 @@ const POS = () => {
       return;
     }
     
-    const lower = searchInput.toLowerCase();
-    const matches = products.filter(p => 
-      p.name.toLowerCase().includes(lower) || 
-      (p.barcode && p.barcode.toLowerCase().includes(lower)) ||
-      (p.sku && p.sku.toLowerCase().includes(lower))
-    ).sort((a, b) => (Number(b.total_sold) || 0) - (Number(a.total_sold) || 0));
+    const searchTerms = searchInput.toLowerCase().trim().split(/\s+/);
+    const matches = products.filter(p => {
+      const name = p.name.toLowerCase();
+      const barcode = p.barcode ? p.barcode.toLowerCase() : '';
+      const sku = p.sku ? p.sku.toLowerCase() : '';
+      
+      return searchTerms.every(term => 
+        name.includes(term) || barcode.includes(term) || sku.includes(term)
+      );
+    }).sort((a, b) => (Number(b.total_sold) || 0) - (Number(a.total_sold) || 0));
     setFilteredProducts(matches);
     setSearchIndex(-1); // reset selection on new search
   }, [searchInput, products]);
@@ -223,16 +227,8 @@ const POS = () => {
   };
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (filteredProducts.length === 0) return;
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setSearchIndex(i => Math.min(i + 1, filteredProducts.length - 1));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setSearchIndex(i => Math.max(i - 1, 0));
-    } else if (e.key === 'Escape') {
+    if (e.key === 'Escape') {
       setSearchInput('');
-      setSearchIndex(-1);
       setFilteredProducts([]);
     }
   };
@@ -448,37 +444,6 @@ const POS = () => {
             />
           </div>
           
-          {/* Autocomplete dropdown */}
-          {filteredProducts.length > 0 && searchInput && (
-            <div className="absolute z-10 w-full mt-1 bg-white border border-border rounded-xl shadow-xl max-h-64 overflow-auto custom-scrollbar">
-              <div style={{ padding: '4px' }}>
-                {filteredProducts.map((p, idx) => (
-                  <div 
-                    key={p.id} 
-                    className="p-2.5 cursor-pointer flex justify-between items-center rounded-lg transition-all"
-                    style={{
-                      background: idx === searchIndex ? '#F1F5F9' : 'transparent',
-                      borderLeft: idx === searchIndex ? '3px solid #2B6BF3' : '3px solid transparent',
-                    }}
-                    onMouseEnter={() => setSearchIndex(idx)}
-                    onMouseLeave={() => setSearchIndex(-1)}
-                    onClick={() => { handleProductClick(p); setSearchInput(''); setSearchIndex(-1); }}
-                  >
-                    <div>
-                      <div className="font-semibold text-xs text-foreground">{p.name}</div>
-                      <div className="text-[10px] text-muted-foreground mt-0.5">SKU: {p.sku} · {p.barcode}</div>
-                    </div>
-                    <div className="font-bold text-foreground text-sm shrink-0 ml-2">
-                      {currencySymbol}{Number(p.selling_price).toFixed(2)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ padding: '4px 10px 6px', borderTop: '1px solid rgba(38,49,108,0.07)', fontSize: 9, color: '#aaa' }}>
-                ↑↓ navigate · Enter to add · Esc to close
-              </div>
-            </div>
-          )}
         </form>
         
         {/* Main Content Split */}

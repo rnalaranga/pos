@@ -235,3 +235,33 @@ export const importProducts = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Failed to process Excel file' });
   }
 };
+
+export const exportProducts = async (req: Request, res: Response) => {
+  try {
+    const query = `
+      SELECT p.name as 'Product Name', p.barcode as 'Barcode', p.sku as 'SKU', 
+             c.name as 'Category', p.unit as 'Unit', 
+             p.purchase_price as 'Purchase Price', p.selling_price as 'Selling Price', 
+             p.wholesale_price as 'Wholesale Price', p.stock as 'Stock', 
+             p.reorder_level as 'Reorder Level', IF(p.is_service = 1, 'Yes', 'No') as 'Is Service',
+             p.status as 'Status'
+      FROM products p 
+      LEFT JOIN categories c ON p.category_id = c.id 
+      ORDER BY p.name ASC
+    `;
+    const [rows]: any = await db.execute(query);
+
+    const ws = xlsx.utils.json_to_sheet(rows);
+    const wb = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(wb, ws, 'Products');
+
+    const buffer = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Disposition', 'attachment; filename="products_export.xlsx"');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buffer);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error during export' });
+  }
+};

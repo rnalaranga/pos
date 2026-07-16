@@ -1,7 +1,7 @@
 import { useDialogStore } from '../store/dialogStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { useState, useEffect, Fragment } from 'react';
-import { Plus, Edit, Trash2, Search, Download, Upload, FileUp } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Download, Upload, FileUp, FileDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../api/axios';
 
 const MaterialSearchSelect = ({ value, onChange, options }: { value: number, onChange: (val: number) => void, options: any[] }) => {
@@ -79,6 +79,8 @@ const Products = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
   const { currencySymbol } = useSettingsStore();
   
   // Modal State
@@ -126,6 +128,21 @@ const Products = () => {
       link.remove();
     } catch (error) {
       useDialogStore.getState().alert('Error', 'Failed to download template');
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      const response = await api.get('/products/export', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'products_export.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      useDialogStore.getState().alert('Error', 'Failed to export products');
     }
   };
 
@@ -212,6 +229,14 @@ const Products = () => {
     (p.sku && p.sku.toLowerCase().includes(search.toLowerCase()))
   );
 
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
+  const paginatedProducts = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // Reset to page 1 if search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -228,6 +253,12 @@ const Products = () => {
             />
           </div>
           <div className="flex gap-2">
+            <button 
+              onClick={handleExport}
+              className="flex items-center bg-white text-emerald-700 border border-emerald-200 px-4 py-2 rounded-md hover:bg-emerald-50 transition-colors h-9 text-sm font-medium shadow-sm"
+            >
+              <FileDown className="h-4 w-4 mr-2" /> Export
+            </button>
             <button 
               onClick={() => setIsImportModalOpen(true)}
               className="flex items-center bg-white text-slate-700 border border-slate-200 px-4 py-2 rounded-md hover:bg-slate-50 transition-colors h-9 text-sm font-medium shadow-sm"
@@ -259,10 +290,10 @@ const Products = () => {
             <tbody>
               {loading ? (
                 <tr><td colSpan={5} className="text-center py-8">Loading...</td></tr>
-              ) : filteredProducts.length === 0 ? (
+              ) : paginatedProducts.length === 0 ? (
                 <tr><td colSpan={5} className="text-center py-8 text-muted-foreground">No products found.</td></tr>
               ) : (
-                filteredProducts.map((prod) => (
+                paginatedProducts.map((prod) => (
                   <tr key={prod.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                     <td className="px-6 py-4">
                       <div className="font-medium text-base">{prod.name}</div>
@@ -310,6 +341,34 @@ const Products = () => {
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination Controls */}
+        {!loading && filteredProducts.length > 0 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t bg-muted/20">
+            <div className="text-sm text-muted-foreground">
+              Showing <span className="font-medium text-foreground">{((currentPage - 1) * pageSize) + 1}</span> to <span className="font-medium text-foreground">{Math.min(currentPage * pageSize, filteredProducts.length)}</span> of <span className="font-medium text-foreground">{filteredProducts.length}</span> entries
+            </div>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="flex items-center justify-center h-8 w-8 rounded-md border bg-background hover:bg-muted disabled:opacity-50 disabled:hover:bg-background"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <div className="flex items-center px-4 h-8 rounded-md bg-muted/50 text-sm font-medium">
+                Page {currentPage} of {totalPages}
+              </div>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="flex items-center justify-center h-8 w-8 rounded-md border bg-background hover:bg-muted disabled:opacity-50 disabled:hover:bg-background"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {isModalOpen && (
