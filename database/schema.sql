@@ -208,6 +208,7 @@ CREATE TABLE IF NOT EXISTS customer_payments (
     FOREIGN KEY (customer_id) REFERENCES customers(id)
 );
 
+-- Service Materials
 CREATE TABLE IF NOT EXISTS service_materials (
   id INT AUTO_INCREMENT PRIMARY KEY,
   service_id INT NOT NULL,
@@ -215,4 +216,41 @@ CREATE TABLE IF NOT EXISTS service_materials (
   quantity DECIMAL(10,2) NOT NULL DEFAULT 1.00,
   FOREIGN KEY (service_id) REFERENCES products(id) ON DELETE CASCADE,
   FOREIGN KEY (material_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
+-- Warehouses
+CREATE TABLE IF NOT EXISTS warehouses (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    location TEXT,
+    is_default BOOLEAN DEFAULT FALSE,
+    status ENUM('Active', 'Inactive') DEFAULT 'Active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT NULL
+);
+
+-- Warehouse Stock
+CREATE TABLE IF NOT EXISTS warehouse_stock (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    warehouse_id INT NOT NULL,
+    stock INT NOT NULL DEFAULT 0,
+    UNIQUE KEY product_warehouse (product_id, warehouse_id),
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    FOREIGN KEY (warehouse_id) REFERENCES warehouses(id) ON DELETE CASCADE
+);
+
+-- Stock Ledger (History of stock movements)
+CREATE TABLE IF NOT EXISTS stock_ledger (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    warehouse_id INT NOT NULL,
+    user_id INT NOT NULL,
+    type ENUM('IN', 'OUT', 'ADJUSTMENT', 'TRANSFER') NOT NULL,
+    quantity INT NOT NULL,
+    reason TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    FOREIGN KEY (warehouse_id) REFERENCES warehouses(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );

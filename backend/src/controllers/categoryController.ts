@@ -22,10 +22,11 @@ export const createCategory = async (req: Request, res: Response) => {
     );
     res.status(201).json({ id: result.insertId, name, description, icon, color_code, parent_id: parsedParentId });
   } catch (error: any) {
+    console.error("CATEGORY UPDATE ERROR:", error);
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ message: 'Category name already exists' });
     }
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error: ' + error.message });
   }
 };
 
@@ -42,10 +43,11 @@ export const updateCategory = async (req: Request, res: Response) => {
     );
     res.json({ message: 'Category updated successfully' });
   } catch (error: any) {
+    console.error("CATEGORY UPDATE ERROR:", error);
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ message: 'Category name already exists' });
     }
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error: ' + error.message });
   }
 };
 
