@@ -534,13 +534,13 @@ const POS = () => {
                     <div 
                       key={`search-${p.id}`}
                       onClick={() => handleProductClick(p)}
-                      className="glass-card p-4 min-h-[110px] cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] flex flex-col animate-in zoom-in-95 fade-in duration-300 border-2 border-transparent hover:border-primary/20 shadow-sm"
+                      className={`glass-card p-4 min-h-[110px] cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] flex flex-col animate-in zoom-in-95 fade-in duration-300 border-2 shadow-sm ${idx === 0 ? 'border-primary bg-primary/10 shadow-primary/20' : 'border-transparent hover:border-primary/20'}`}
                       style={{ animationDelay: `${(idx % 12) * 50}ms`, animationFillMode: 'both' }}
                     >
-                      <div className="font-extrabold text-[15px] leading-tight line-clamp-3 text-slate-800 tracking-tight mb-3">{p.name}</div>
+                      <div className="font-extrabold text-[13px] leading-tight line-clamp-3 text-slate-800 tracking-tight mb-2">{p.name}</div>
                       <div className="flex justify-between items-end mt-auto">
-                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-2 py-0.5 bg-slate-100 rounded border border-slate-200">{p.sku || p.barcode || '---'}</div>
-                        <div className="font-black text-[15px] text-primary">{currencySymbol}{Number(p.selling_price).toFixed(2)}</div>
+                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider px-2 py-0.5 bg-slate-100 rounded border border-slate-200">{p.sku || p.barcode || '---'}</div>
+                        <div className="font-black text-[14px] text-primary">{currencySymbol}{Number(p.selling_price).toFixed(2)}</div>
                       </div>
                     </div>
                   ))
@@ -554,10 +554,10 @@ const POS = () => {
                         className="glass-card p-4 min-h-[110px] cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] flex flex-col animate-in zoom-in-95 fade-in duration-300 border-2 border-transparent hover:border-primary/20 shadow-sm"
                         style={{ animationDelay: `${(idx % 15) * 40}ms`, animationFillMode: 'both' }}
                       >
-                        <div className="font-extrabold text-[15px] leading-tight line-clamp-3 text-slate-800 tracking-tight mb-3">{p.name}</div>
+                        <div className="font-extrabold text-[13px] leading-tight line-clamp-3 text-slate-800 tracking-tight mb-2">{p.name}</div>
                         <div className="flex justify-between items-end mt-auto">
-                          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-2 py-0.5 bg-slate-100 rounded border border-slate-200">{p.sku || p.barcode || '---'}</div>
-                          <div className="font-black text-[15px] text-primary">{currencySymbol}{Number(p.selling_price).toFixed(2)}</div>
+                          <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider px-2 py-0.5 bg-slate-100 rounded border border-slate-200">{p.sku || p.barcode || '---'}</div>
+                          <div className="font-black text-[14px] text-primary">{currencySymbol}{Number(p.selling_price).toFixed(2)}</div>
                         </div>
                       </div>
                     ))}
