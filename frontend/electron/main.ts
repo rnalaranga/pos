@@ -16,7 +16,7 @@ function createWindow() {
     frame: false,
     titleBarStyle: 'hidden',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
       contextIsolation: true,
     },
@@ -29,20 +29,33 @@ function createWindow() {
   });
   ipcMain.on('window-close', () => win?.close());
 
-  ipcMain.handle('print-receipt', async (_event: any, htmlContent: string) => {
+  ipcMain.handle('get-printers', async () => {
+    return await win?.webContents.getPrintersAsync();
+  });
+
+  ipcMain.handle('print-receipt', async (_event: any, htmlContent: string, options?: { preview?: boolean, deviceName?: string }) => {
     const printWin = new BrowserWindow({
       show: false,
       webPreferences: { nodeIntegration: false, contextIsolation: true }
     });
     await printWin.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(htmlContent));
+    
     return new Promise((resolve, reject) => {
-      printWin.webContents.print(
-        { silent: true, printBackground: true, color: false, copies: 1 },
-        (success: boolean, reason: string) => {
-          printWin.close();
-          if (!success) reject(reason); else resolve(success);
-        }
-      );
+      const printOptions: any = { 
+        silent: !options?.preview, 
+        printBackground: true, 
+        color: false, 
+        copies: 1 
+      };
+      
+      if (options?.deviceName && !options?.preview) {
+        printOptions.deviceName = options.deviceName;
+      }
+
+      printWin.webContents.print(printOptions, (success: boolean, reason: string) => {
+        printWin.close();
+        if (!success) reject(reason); else resolve(success);
+      });
     });
   });
 

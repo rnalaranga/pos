@@ -1,8 +1,8 @@
-"use strict";
-const electron = require("electron");
-electron.contextBridge.exposeInMainWorld("electronAPI", {
-  minimize: () => electron.ipcRenderer.send("window-min"),
-  maximize: () => electron.ipcRenderer.send("window-max"),
-  close: () => electron.ipcRenderer.send("window-close"),
-  printReceipt: (htmlContent, printerName) => electron.ipcRenderer.invoke("print-receipt", htmlContent, printerName)
+import { contextBridge as r, ipcRenderer as e } from "electron";
+r.exposeInMainWorld("electronAPI", {
+  minimize: () => e.send("window-min"),
+  maximize: () => e.send("window-max"),
+  close: () => e.send("window-close"),
+  getPrinters: () => e.invoke("get-printers"),
+  printReceipt: (i, n) => e.invoke("print-receipt", i, n)
 });

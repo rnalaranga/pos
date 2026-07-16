@@ -156,6 +156,7 @@ const SalesHistory = () => {
           companyAddress={settingsMap.company_address}
           footerMessage={settingsMap.receipt_footer}
           currencySymbol={settingsMap.currency_symbol}
+          companyLogo={settingsMap.company_logo}
         />
       );
       
@@ -350,6 +351,7 @@ const SalesHistory = () => {
                   companyAddress={settingsMap.company_address}
                   footerMessage={settingsMap.receipt_footer}
                   currencySymbol={settingsMap.currency_symbol}
+                  companyLogo={settingsMap.company_logo}
                 />
               </div>
             </div>

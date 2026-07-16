@@ -10,6 +10,9 @@ export interface Product {
   selling_price: number;
   stock: number;
   is_service: boolean;
+  category_id?: number | null;
+  total_sold?: number;
+  materials?: { material_id: number; quantity: number }[];
 }
 
 export interface CartItem extends Product {
@@ -47,7 +50,7 @@ interface PosState {
   fetchProducts: () => Promise<void>;
   setSearchQuery: (query: string) => void;
   setCustomer: (customer: Customer | null) => void;
-  addToCart: (product: Product, qty?: number) => void;
+  addToCart: (product: Product, qty?: number, priceOverride?: number, discount?: number) => void;
   updateCartItem: (productId: number, updates: Partial<CartItem>) => void;
   removeFromCart: (productId: number) => void;
   setGlobalDiscount: (amount: number) => void;
@@ -122,22 +125,29 @@ export const usePosStore = create<PosState>((set, get) => ({
     });
   },
 
-  addToCart: (product, qty = 1) => {
+  addToCart: (product, qty = 1, priceOverride, discount = 0) => {
     const { cart, calculateTotals } = get();
     const existingItemIndex = cart.findIndex(item => item.id === product.id);
+
+    const price = priceOverride !== undefined ? priceOverride : product.selling_price;
 
     if (existingItemIndex >= 0) {
       const updatedCart = [...cart];
       const newQty = updatedCart[existingItemIndex].quantity + qty;
       updatedCart[existingItemIndex].quantity = newQty;
+      if (priceOverride !== undefined) {
+        updatedCart[existingItemIndex].selling_price = price;
+      }
+      updatedCart[existingItemIndex].discount += discount;
       updatedCart[existingItemIndex].subtotal = (newQty * updatedCart[existingItemIndex].selling_price) - updatedCart[existingItemIndex].discount;
       set({ cart: updatedCart });
     } else {
       const newItem: CartItem = {
         ...product,
+        selling_price: price,
         quantity: qty,
-        discount: 0,
-        subtotal: product.selling_price * qty
+        discount: discount,
+        subtotal: (price * qty) - discount
       };
       set({ cart: [...cart, newItem] });
     }

@@ -20,6 +20,7 @@ export interface ReceiptProps {
   companyAddress?: string;
   footerMessage?: string;
   currencySymbol?: string;
+  companyLogo?: string;
 }
 
 export const Receipt80mm = forwardRef<HTMLDivElement, ReceiptProps>(({
@@ -27,12 +28,16 @@ export const Receipt80mm = forwardRef<HTMLDivElement, ReceiptProps>(({
   companyName = "Enterprise Stationery",
   companyAddress = "123 Business St, Tech City",
   footerMessage = "Thank you for your business!",
-  currencySymbol = "$"
+  currencySymbol = "$",
+  companyLogo
 }, ref) => {
   return (
     <div ref={ref} className="w-[80mm] p-4 text-black bg-white font-mono text-sm leading-tight mx-auto border" style={{ printColorAdjust: 'exact' }}>
       {/* Header */}
       <div className="text-center mb-4">
+        {companyLogo && (
+          <img src={companyLogo} alt="Logo" className="max-h-16 mx-auto mb-2" style={{ objectFit: 'contain' }} />
+        )}
         <h1 className="text-xl font-bold mb-1">{companyName}</h1>
         <p className="text-xs">{companyAddress}</p>
       </div>

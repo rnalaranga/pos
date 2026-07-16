@@ -1,6 +1,6 @@
 import { useDialogStore } from '../store/dialogStore';
 import { useEffect, useRef, useState } from 'react';
-import { Search, UserPlus, Banknote, Trash2, Star } from 'lucide-react';
+import { Search, UserPlus, Banknote, Trash2, Star, Folder } from 'lucide-react';
 import { usePosStore, Product } from '../store/posStore';
 import { renderToString } from 'react-dom/server';
 import { Receipt80mm } from '../components/pos/Receipt';
@@ -26,6 +26,43 @@ const POS = () => {
   const [searchIndex, setSearchIndex] = useState(-1);
   const searchInputRef = useRef<HTMLInputElement>(null);
   
+  // Item Edit State
+  const [editingItem, setEditingItem] = useState<{ id: number; name: string; sku: string; selling_price: number; quantity: number; discount: number; barcode: string; is_service: boolean; category_id?: number | null; stock: number; } | null>(null);
+  const qtyInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingItem) {
+      setTimeout(() => qtyInputRef.current?.select(), 50);
+    }
+  }, [editingItem?.id]);
+
+  const handleProductClick = (p: Product) => {
+    const existing = cart.find(c => c.id === p.id);
+    if (existing) {
+      setEditingItem({ ...existing });
+    } else {
+      setEditingItem({ ...p, quantity: 1, discount: 0 });
+    }
+  };
+
+  const handleSaveItem = () => {
+    if (!editingItem) return;
+    const existingIndex = cart.findIndex(c => c.id === editingItem.id);
+    if (existingIndex >= 0) {
+      updateCartItem(editingItem.id, { 
+        quantity: editingItem.quantity, 
+        selling_price: editingItem.selling_price, 
+        discount: editingItem.discount 
+      });
+    } else {
+      addToCart(editingItem, editingItem.quantity, editingItem.selling_price, editingItem.discount);
+    }
+    setEditingItem(null);
+    setSearchInput('');
+    setSearchIndex(-1);
+    setFilteredProducts([]);
+  };
+  
   // Payment Modal State
   const [showPayment, setShowPayment] = useState(false);
   const [amountPaid, setAmountPaid] = useState<number>(0);
@@ -35,6 +72,28 @@ const POS = () => {
   // Held Bills State
   const [showHeldBills, setShowHeldBills] = useState(false);
   const [heldBills, setHeldBills] = useState<any[]>([]);
+
+  // Navigation state for categories
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedMainCategory, setSelectedMainCategory] = useState<number | null>(null);
+  const [selectedSubCategory, setSelectedSubCategory] = useState<number | null>(null);
+
+  // Derived state for display
+  const activeSubCategories = selectedMainCategory 
+    ? categories.filter(c => c.parent_id === selectedMainCategory) 
+    : [];
+    
+  const activeSubCatIds = activeSubCategories.map(c => c.id);
+
+  const displayProducts = products.filter(p => {
+    if (selectedSubCategory) {
+      return p.category_id === selectedSubCategory;
+    }
+    if (selectedMainCategory) {
+      return p.category_id === selectedMainCategory || activeSubCatIds.includes(p.category_id);
+    }
+    return true; // All items
+  });
   
   // Customer & Loyalty State
   const [customers, setCustomers] = useState<any[]>([]);
@@ -79,10 +138,26 @@ const POS = () => {
 
   useEffect(() => {
     fetchProducts();
+    fetchCategories();
     
     // Global Keyboard Shortcuts
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F1') {
+      if (e.key === 'Escape') {
+        setShowPayment(false);
+        setShowHeldBills(false);
+      } else if (settings?.shortcut_discount && e.key === settings.shortcut_discount) {
+        e.preventDefault();
+        document.getElementById('global-discount-input')?.focus();
+      } else if (settings?.shortcut_print && e.key === settings.shortcut_print) {
+        e.preventDefault();
+        const confirmBtn = document.getElementById('confirm-payment-btn');
+        if (confirmBtn) {
+          confirmBtn.click();
+        } else if (usePosStore.getState().cart.length > 0) {
+          setAmountPaid(usePosStore.getState().grandTotal);
+          setShowPayment(true);
+        }
+      } else if (e.key === 'F1') {
         e.preventDefault();
         searchInputRef.current?.focus();
       } else if (e.key === 'F8') {
@@ -96,10 +171,10 @@ const POS = () => {
         setShowHeldBills(true);
       } else if (e.ctrlKey && e.key === 's') {
         e.preventDefault();
-        if (cart.length > 0) setShowPayment(true);
-      } else if (e.key === 'Escape') {
-        setShowPayment(false);
-        setShowHeldBills(false);
+        if (usePosStore.getState().cart.length > 0) {
+          setAmountPaid(usePosStore.getState().grandTotal);
+          setShowPayment(true);
+        }
       }
     };
 
@@ -110,7 +185,16 @@ const POS = () => {
     if (saved) setHeldBills(JSON.parse(saved));
 
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cart, customer, globalDiscount, loyaltyPointsUsed]);
+  }, [cart, customer, globalDiscount, loyaltyPointsUsed, settings]);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await api.get('/categories');
+      setCategories(res.data);
+    } catch(e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
     if (searchInput.trim() === '') {
@@ -118,15 +202,12 @@ const POS = () => {
       return;
     }
     
-    const query = searchInput.toLowerCase();
+    const lower = searchInput.toLowerCase();
     const matches = products.filter(p => 
-      p.name.toLowerCase().includes(query) || 
-      (p.barcode && p.barcode.includes(query)) || 
-      (p.sku && p.sku.toLowerCase().includes(query))
-    );
-    
-    // Barcode scanner simulation: if it's an exact match on barcode and entered quickly, auto-add
-    // Real barcode scanners act as a fast keyboard that ends with 'Enter'
+      p.name.toLowerCase().includes(lower) || 
+      (p.barcode && p.barcode.toLowerCase().includes(lower)) ||
+      (p.sku && p.sku.toLowerCase().includes(lower))
+    ).sort((a, b) => (Number(b.total_sold) || 0) - (Number(a.total_sold) || 0));
     setFilteredProducts(matches);
     setSearchIndex(-1); // reset selection on new search
   }, [searchInput, products]);
@@ -135,7 +216,7 @@ const POS = () => {
     e.preventDefault();
     const target = searchIndex >= 0 ? filteredProducts[searchIndex] : filteredProducts[0];
     if (target) {
-      addToCart(target);
+      handleProductClick(target);
       setSearchInput('');
       setSearchIndex(-1);
     }
@@ -184,9 +265,7 @@ const POS = () => {
       // Instead, we clear cart and add them one by one
       clearCart();
       bill.cart.forEach((item: any) => {
-        addToCart(item);
-        // Wait, addToCart sets quantity to 1. We need to update it.
-        updateCartItem(item.id, { quantity: item.quantity, discount: item.discount });
+        addToCart(item, item.quantity, item.selling_price, item.discount);
       });
       setCustomer(bill.customer);
       setGlobalDiscount(bill.globalDiscount);
@@ -223,6 +302,11 @@ const POS = () => {
               total={grandTotal}
               amountPaid={amountPaid}
               paymentMethod={paymentMethod}
+              companyName={settings.company_name}
+              companyAddress={settings.company_address}
+              footerMessage={settings.receipt_footer}
+              currencySymbol={currencySymbol}
+              companyLogo={settings.company_logo}
             />
           );
           
@@ -266,7 +350,10 @@ const POS = () => {
             </html>
           `;
           
-          await (window as any).electronAPI.printReceipt(fullHtml, '80mm');
+          await (window as any).electronAPI.printReceipt(fullHtml, { 
+            preview: settings?.print_preview === 'true', 
+            deviceName: settings?.default_printer 
+          });
         } catch (e) {
           console.error("Printing error", e);
         }
@@ -284,7 +371,11 @@ const POS = () => {
             total={grandTotal}
             amountPaid={amountPaid}
             paymentMethod={paymentMethod}
+            companyName={settings.company_name}
+            companyAddress={settings.company_address}
+            footerMessage={settings.receipt_footer}
             currencySymbol={currencySymbol}
+            companyLogo={settings.company_logo}
           />
         );
 
@@ -371,7 +462,7 @@ const POS = () => {
                     }}
                     onMouseEnter={() => setSearchIndex(idx)}
                     onMouseLeave={() => setSearchIndex(-1)}
-                    onClick={() => { addToCart(p); setSearchInput(''); setSearchIndex(-1); }}
+                    onClick={() => { handleProductClick(p); setSearchInput(''); setSearchIndex(-1); }}
                   >
                     <div>
                       <div className="font-semibold text-xs text-foreground">{p.name}</div>
@@ -390,30 +481,137 @@ const POS = () => {
           )}
         </form>
         
-        {/* Visual Product Grid */}
-        <div className="flex-1 rounded-2xl overflow-y-auto custom-scrollbar grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 content-start">
-          {products.map((p) => (
-            <div 
-              key={p.id}
-              onClick={() => addToCart(p)}
-              className="glass-card p-3 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] flex flex-col gap-2"
-            >
-              <div className="aspect-[4/3] rounded-xl flex flex-col items-center justify-center text-center p-2 mb-1 bg-muted/50 border border-border/50">
-                {/* Fallback Icon */}
-                <div className="text-3xl opacity-80 drop-shadow-sm">📦</div>
-                <div className="text-[9px] font-bold text-muted-foreground mt-1 uppercase tracking-wider">{p.sku}</div>
-              </div>
-              <div className="flex-1 flex flex-col justify-end">
-                <div className="font-semibold text-xs leading-tight line-clamp-2 text-foreground/90">{p.name}</div>
-                <div className="font-bold text-sm mt-1 text-foreground">{currencySymbol}{Number(p.selling_price).toFixed(2)}</div>
-              </div>
-            </div>
-          ))}
-          {products.length === 0 && (
-            <div className="col-span-full flex flex-col items-center justify-center text-muted-foreground opacity-50 py-12">
-              <p>No products available</p>
+        {/* Main Content Split */}
+        <div className="flex-1 flex gap-4 min-h-0">
+          
+          {/* Left Sidebar - Main Categories */}
+          {!searchInput && (
+            <div className="w-[100px] shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar pb-4 pr-1">
+              <button 
+                onClick={() => { setSelectedMainCategory(null); setSelectedSubCategory(null); }}
+                className={`w-full aspect-square rounded-2xl flex flex-col items-center justify-center gap-2 transition-all shadow-sm border ${
+                  selectedMainCategory === null 
+                    ? 'bg-primary text-primary-foreground scale-105 border-primary/50' 
+                    : 'bg-white hover:bg-slate-50 border-border text-muted-foreground hover:scale-105'
+                }`}
+              >
+                <div className="p-2 rounded-full bg-white/20">
+                  <Star className={`h-6 w-6 ${selectedMainCategory === null ? 'text-white' : 'text-primary'}`} />
+                </div>
+                <span className="text-xs font-bold text-center leading-tight">All Items</span>
+              </button>
+              
+              {categories.filter(c => !c.parent_id).map((c, idx) => (
+                <button 
+                  key={`main-${c.id}`}
+                  onClick={() => { setSelectedMainCategory(c.id); setSelectedSubCategory(null); }}
+                  className={`w-full aspect-square rounded-2xl flex flex-col items-center justify-center gap-2 transition-all shadow-sm border relative overflow-hidden animate-in fade-in slide-in-from-left-4 duration-300 ${
+                    selectedMainCategory === c.id 
+                      ? 'text-white scale-105 border-transparent' 
+                      : 'bg-white hover:bg-slate-50 border-border text-muted-foreground hover:scale-105'
+                  }`}
+                  style={{ 
+                    backgroundColor: selectedMainCategory === c.id ? (c.color_code || '#3b82f6') : undefined,
+                    animationDelay: `${idx * 50}ms`,
+                    animationFillMode: 'both'
+                  }}
+                >
+                  {selectedMainCategory === c.id && (
+                    <div className="absolute inset-0 bg-black/10"></div>
+                  )}
+                  <div className="p-2 rounded-full relative z-10" style={{ backgroundColor: selectedMainCategory === c.id ? 'rgba(255,255,255,0.2)' : `${c.color_code || '#3b82f6'}15` }}>
+                    <Folder className="h-6 w-6" style={{ color: selectedMainCategory === c.id ? '#fff' : (c.color_code || '#3b82f6') }} />
+                  </div>
+                  <span className="text-[11px] font-bold text-center leading-tight relative z-10 px-1">{c.name}</span>
+                </button>
+              ))}
             </div>
           )}
+
+          {/* Right Grid Area */}
+          <div className="flex-1 flex flex-col min-w-0">
+            
+            {/* Subcategory Pills */}
+            {!searchInput && selectedMainCategory !== null && activeSubCategories.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-3 shrink-0 mb-1 animate-in slide-in-from-top-4 fade-in duration-300">
+                <button 
+                  onClick={() => setSelectedSubCategory(null)}
+                  className={`px-5 py-2.5 rounded-full font-bold text-sm whitespace-nowrap transition-all shadow-sm border ${
+                    selectedSubCategory === null 
+                      ? 'bg-foreground text-background border-transparent' 
+                      : 'bg-white hover:bg-slate-50 border-border text-muted-foreground'
+                  }`}
+                >
+                  All in Category
+                </button>
+                {activeSubCategories.map(sub => (
+                  <button 
+                    key={`sub-${sub.id}`}
+                    onClick={() => setSelectedSubCategory(sub.id)}
+                    className={`px-5 py-2.5 rounded-full font-bold text-sm whitespace-nowrap transition-all shadow-sm border ${
+                      selectedSubCategory === sub.id 
+                        ? 'bg-foreground text-background border-transparent' 
+                        : 'bg-white hover:bg-slate-50 border-border text-muted-foreground'
+                    }`}
+                  >
+                    {sub.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Product Grid */}
+            <div className="flex-1 rounded-2xl overflow-y-auto custom-scrollbar">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 content-start pb-4">
+                {searchInput ? (
+                  // Search Mode
+                  filteredProducts.map((p, idx) => (
+                    <div 
+                      key={`search-${p.id}`}
+                      onClick={() => handleProductClick(p)}
+                      className="glass-card p-4 min-h-[110px] cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] flex flex-col animate-in zoom-in-95 fade-in duration-300 border-2 border-transparent hover:border-primary/20 shadow-sm"
+                      style={{ animationDelay: `${(idx % 12) * 50}ms`, animationFillMode: 'both' }}
+                    >
+                      <div className="font-extrabold text-[15px] leading-tight line-clamp-3 text-slate-800 tracking-tight mb-3">{p.name}</div>
+                      <div className="flex justify-between items-end mt-auto">
+                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-2 py-0.5 bg-slate-100 rounded border border-slate-200">{p.sku || p.barcode || '---'}</div>
+                        <div className="font-black text-[15px] text-primary">{currencySymbol}{Number(p.selling_price).toFixed(2)}</div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  // Normal Mode
+                  <>
+                    {displayProducts.map((p, idx) => (
+                      <div 
+                        key={`prod-${p.id}`}
+                        onClick={() => handleProductClick(p)}
+                        className="glass-card p-4 min-h-[110px] cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] flex flex-col animate-in zoom-in-95 fade-in duration-300 border-2 border-transparent hover:border-primary/20 shadow-sm"
+                        style={{ animationDelay: `${(idx % 15) * 40}ms`, animationFillMode: 'both' }}
+                      >
+                        <div className="font-extrabold text-[15px] leading-tight line-clamp-3 text-slate-800 tracking-tight mb-3">{p.name}</div>
+                        <div className="flex justify-between items-end mt-auto">
+                          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-2 py-0.5 bg-slate-100 rounded border border-slate-200">{p.sku || p.barcode || '---'}</div>
+                          <div className="font-black text-[15px] text-primary">{currencySymbol}{Number(p.selling_price).toFixed(2)}</div>
+                        </div>
+                      </div>
+                    ))}
+                    {!searchInput && displayProducts.length === 0 && (
+                      <div className="col-span-full flex flex-col items-center justify-center text-muted-foreground opacity-50 py-12">
+                        <p>No products in this category</p>
+                      </div>
+                    )}
+                  </>
+                )}
+                
+                {searchInput && products.length === 0 && (
+                  <div className="col-span-full flex flex-col items-center justify-center text-muted-foreground opacity-50 py-12">
+                    <p>No products found</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -437,21 +635,25 @@ const POS = () => {
               </div>
             ) : (
               cart.map((item) => (
-                <div key={item.id} className="p-2.5 rounded-xl flex gap-3 items-center relative group transition-all hover:bg-muted/30 border border-transparent hover:border-border">
+                <div 
+                  key={item.id} 
+                  onClick={() => setEditingItem({ ...item })}
+                  className="py-1.5 px-2 rounded-lg flex gap-2 items-center relative group transition-all hover:bg-muted/40 border border-transparent hover:border-border cursor-pointer"
+                >
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm leading-tight line-clamp-2 text-foreground/90">{item.name}</div>
-                    <div className="text-[11px] font-bold mt-1 text-foreground">{currencySymbol}{Number(item.selling_price).toFixed(2)}</div>
+                    <div className="font-bold text-[13px] leading-tight line-clamp-1 text-slate-800">{item.name}</div>
+                    <div className="text-[10px] font-semibold mt-0.5 text-slate-500">{currencySymbol}{Number(item.selling_price).toFixed(2)}</div>
                   </div>
-                  <div className="flex flex-col items-end gap-1.5 shrink-0">
-                    <div className="font-bold text-sm text-foreground">{currencySymbol}{item.subtotal.toFixed(2)}</div>
-                    <div className="flex items-center bg-muted/50 rounded-full border border-border p-0.5">
-                      <button onClick={() => updateCartItem(item.id, { quantity: Math.max(1, item.quantity - 1) })} className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-white text-lg font-medium text-foreground">-</button>
-                      <span className="w-6 text-center font-bold text-xs text-foreground">{item.quantity}</span>
-                      <button onClick={() => updateCartItem(item.id, { quantity: item.quantity + 1 })} className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-white text-lg font-medium text-foreground">+</button>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <div className="font-black text-[13px] text-primary">{currencySymbol}{item.subtotal.toFixed(2)}</div>
+                    <div className="flex items-center bg-slate-100 rounded-md border border-slate-200">
+                      <button onClick={(e) => { e.stopPropagation(); updateCartItem(item.id, { quantity: Math.max(1, item.quantity - 1) }) }} className="w-5 h-5 flex items-center justify-center rounded-l-md hover:bg-white text-sm font-medium text-slate-700 hover:text-primary transition-colors">-</button>
+                      <span className="w-5 text-center font-bold text-[11px] text-slate-800 bg-white/50">{item.quantity}</span>
+                      <button onClick={(e) => { e.stopPropagation(); updateCartItem(item.id, { quantity: item.quantity + 1 }) }} className="w-5 h-5 flex items-center justify-center rounded-r-md hover:bg-white text-sm font-medium text-slate-700 hover:text-primary transition-colors">+</button>
                     </div>
                   </div>
                   <button 
-                    onClick={() => removeFromCart(item.id)}
+                    onClick={(e) => { e.stopPropagation(); removeFromCart(item.id); }}
                     className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm z-10 bg-destructive text-destructive-foreground"
                   >
                     <Trash2 className="h-3 w-3" />
@@ -463,14 +665,14 @@ const POS = () => {
         </div>
 
         {/* Customer Selection */}
-        <div className="rounded-2xl p-4 flex flex-col justify-center shrink-0 bg-white border border-border shadow-sm">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="font-bold flex items-center text-xs tracking-wide text-foreground/80">
-              <UserPlus className="h-4 w-4 mr-1.5" /> CUSTOMER
+        <div className="rounded-xl p-3 flex flex-col justify-center shrink-0 bg-white border border-border shadow-sm">
+          <div className="flex justify-between items-center mb-1.5">
+            <h3 className="font-bold flex items-center text-[10px] tracking-wide text-foreground/80">
+              <UserPlus className="h-3.5 w-3.5 mr-1" /> CUSTOMER
             </h3>
             <button 
               onClick={() => setShowNewCustomer(true)}
-              className="text-[10px] uppercase font-bold text-primary hover:bg-primary/10 px-2 py-1 rounded"
+              className="text-[9px] uppercase font-bold text-primary hover:bg-primary/10 px-2 py-0.5 rounded"
             >
               + Add New
             </button>
@@ -489,7 +691,7 @@ const POS = () => {
               }}
               onFocus={() => setShowCustomerDropdown(true)}
               onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
-              className="w-full h-11 px-3 rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm font-semibold transition-shadow bg-muted/20 text-foreground"
+              className="w-full h-9 px-3 rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 text-xs font-semibold transition-shadow bg-muted/20 text-foreground"
             />
             {showCustomerDropdown && (
               <div className="absolute top-full mt-1 left-0 w-full bg-white rounded-xl shadow-lg max-h-48 overflow-auto z-50 border border-border p-1">
@@ -531,43 +733,44 @@ const POS = () => {
         </div>
 
         {/* Totals */}
-        <div className="rounded-3xl p-5 flex flex-col shrink-0 bg-gradient-to-br from-primary/5 to-transparent border border-primary/10 shadow-lg relative overflow-hidden">
+        <div className="rounded-2xl p-3 flex flex-col shrink-0 bg-gradient-to-br from-primary/5 to-transparent border border-primary/10 shadow-md relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
           
-          <div className="space-y-4 font-semibold text-foreground relative z-10">
-            <div className="flex justify-between items-center opacity-90 text-sm">
+          <div className="space-y-2 font-semibold text-foreground relative z-10">
+            <div className="flex justify-between items-center opacity-90 text-[11px]">
               <span className="text-muted-foreground">Subtotal</span>
-              <span className="font-bold text-lg">{currencySymbol}{subtotal.toFixed(2)}</span>
+              <span className="font-bold text-[13px]">{currencySymbol}{subtotal.toFixed(2)}</span>
             </div>
             
             <div className="flex justify-between items-center">
-              <span className="text-sm font-bold opacity-90 flex items-center text-muted-foreground">
+              <span className="text-[11px] font-bold opacity-90 flex items-center text-muted-foreground">
                 Discount 
                 {customer?.rating && customer.rating !== 'Standard' && (
-                  <span className="ml-2 text-[10px] bg-primary text-primary-foreground px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
-                    <Star className="h-2.5 w-2.5 fill-current" /> {customer.rating} (-{usePosStore.getState().customerDiscountPercentage}%)
+                  <span className="ml-2 text-[9px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
+                    <Star className="h-2 w-2 fill-current" /> {customer.rating} (-{usePosStore.getState().customerDiscountPercentage}%)
                   </span>
                 )}
               </span>
               <div className="flex items-center">
-                <span className="mr-2 text-muted-foreground font-bold">{currencySymbol}</span>
+                <span className="mr-1.5 text-muted-foreground font-bold text-xs">{currencySymbol}</span>
                 <input 
+                  id="global-discount-input"
                   type="number" min="0" step="0.01" value={globalDiscount || ''}
                   placeholder="0.00"
                   onChange={(e) => setGlobalDiscount(parseFloat(e.target.value) || 0)}
-                  className="w-24 h-9 text-right rounded-xl focus:ring-2 focus:ring-primary/50 px-2 font-bold text-lg transition-all border border-border bg-white shadow-inner text-primary" 
+                  className="w-24 h-10 text-right rounded-lg focus:ring-2 focus:ring-primary px-3 font-bold text-lg transition-all border-2 border-border bg-white shadow-inner text-primary" 
                 />
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 bg-primary/5 p-3 rounded-xl border border-primary/10">
-              <div className="flex justify-between items-center opacity-90 text-sm">
+            <div className="flex flex-col gap-1.5 bg-primary/5 p-2 rounded-lg border border-primary/10">
+              <div className="flex justify-between items-center opacity-90 text-[11px]">
                 <span className="text-primary/80 font-bold flex flex-col">
                   <span>Pay with Points</span>
-                  <span className="text-[10px] opacity-70">(1pt = {currencySymbol}{settings?.loyalty_point_value || 1})</span>
+                  <span className="text-[9px] opacity-70">(1pt = {currencySymbol}{settings?.loyalty_point_value || 1})</span>
                 </span>
                 <div className="flex items-center">
-                  <span className="mr-2 text-primary font-bold text-xs bg-primary/10 px-2 py-1 rounded-md">PTS</span>
+                  <span className="mr-1.5 text-primary font-bold text-[10px] bg-primary/10 px-1.5 py-0.5 rounded">PTS</span>
                   <input 
                     type="number" min="0" max={customer?.loyalty_points || 0} value={loyaltyPointsUsed || ''}
                     placeholder="0"
@@ -586,38 +789,39 @@ const POS = () => {
                       setLoyaltyPointsUsed(val);
                     }}
                     disabled={!customer || (customer.loyalty_points < (parseInt(settings?.loyalty_min_redeem) || 0))}
-                    className="w-24 h-9 text-right rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 px-2 font-bold transition-all disabled:opacity-40 border border-primary/20 bg-white shadow-sm text-primary" 
+                    className="w-16 h-7 text-right rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 px-2 font-bold text-xs transition-all disabled:opacity-40 border border-primary/20 bg-white shadow-sm text-primary" 
                   />
                 </div>
               </div>
               {customer && customer.loyalty_points < parseInt(settings?.loyalty_min_redeem || '0') && (
-                <div className="text-[10px] text-orange-500 font-bold bg-orange-500/10 px-2 py-1 rounded w-fit">
+                <div className="text-[9px] text-orange-500 font-bold bg-orange-500/10 px-1.5 py-0.5 rounded w-fit mt-0.5">
                   Min redeemable: {settings?.loyalty_min_redeem} pts
                 </div>
               )}
             </div>
           </div>
           
-          <div className="border-t-2 border-dashed border-primary/20 pt-4 mt-4 flex justify-between items-end relative z-10">
+          <div className="border-t border-dashed border-primary/20 pt-2.5 mt-2.5 flex justify-between items-end relative z-10">
             <div className="flex flex-col">
-              <span className="font-bold text-xs tracking-widest text-primary/70">GRAND TOTAL</span>
-              <span className="text-[10px] text-muted-foreground uppercase mt-0.5">Includes Tax</span>
+              <span className="font-bold text-[10px] tracking-widest text-primary/70">GRAND TOTAL</span>
             </div>
-            <span className="text-4xl font-black text-primary tracking-tight">{currencySymbol}{grandTotal.toFixed(2)}</span>
+            <span className="text-2xl font-black text-primary tracking-tight leading-none">{currencySymbol}{grandTotal.toFixed(2)}</span>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="grid grid-cols-3 gap-2 shrink-0">
-          <button onClick={handleHoldBill} className="h-10 rounded-full font-semibold transition-all hover:scale-[0.97] bg-blue-50 text-blue-600 text-xs border border-blue-100">
-            Hold
-          </button>
-          <button onClick={() => setShowHeldBills(true)} className="h-10 rounded-full font-semibold transition-all hover:scale-[0.97] bg-orange-50 text-orange-600 text-xs border border-orange-100">
-            Recall
-          </button>
-          <button onClick={() => { setShowPayment(false); setShowHeldBills(false); }} className="h-10 rounded-full font-semibold transition-all hover:scale-[0.97] bg-red-50 text-red-600 text-xs border border-red-100">
-            Cancel
-          </button>
+        {/* Action Buttons & Checkout */}
+        <div className="flex flex-col gap-3 shrink-0 mt-1">
+          <div className="flex gap-2">
+            <button onClick={handleHoldBill} className="flex-1 h-9 rounded-xl font-bold transition-all hover:bg-blue-100 active:scale-95 bg-blue-50/80 text-blue-700 text-[11px] border border-blue-200/60 uppercase tracking-wide shadow-sm">
+              Hold
+            </button>
+            <button onClick={() => setShowHeldBills(true)} className="flex-1 h-9 rounded-xl font-bold transition-all hover:bg-amber-100 active:scale-95 bg-amber-50/80 text-amber-700 text-[11px] border border-amber-200/60 uppercase tracking-wide shadow-sm">
+              Recall
+            </button>
+            <button onClick={() => { clearCart(); setGlobalDiscount(0); setCustomer(null); setShowPayment(false); }} className="flex-1 h-9 rounded-xl font-bold transition-all hover:bg-red-100 active:scale-95 bg-red-50/80 text-red-700 text-[11px] border border-red-200/60 uppercase tracking-wide shadow-sm">
+              Cancel
+            </button>
+          </div>
           
           <button 
             onClick={() => {
@@ -627,9 +831,9 @@ const POS = () => {
               }
             }}
             disabled={cart.length === 0}
-            className="h-14 rounded-full font-bold text-lg transition-all hover:scale-[0.98] flex items-center justify-center col-span-3 disabled:opacity-50 disabled:scale-100 btn-primary"
+            className="h-14 rounded-2xl font-bold text-lg transition-all hover:scale-[0.98] flex items-center justify-center disabled:opacity-50 disabled:scale-100 btn-primary shadow-lg hover:shadow-xl"
           >
-            <Banknote className="h-5 w-5 mr-2" />
+            <Banknote className="h-5 w-5 mr-2 opacity-80" />
             <span className="tracking-wide">Place Order • {currencySymbol}{grandTotal.toFixed(2)}</span>
           </button>
         </div>
@@ -700,11 +904,12 @@ const POS = () => {
                 Cancel
               </button>
               <button 
+                id="confirm-payment-btn"
                 onClick={handleCheckout}
                 disabled={isProcessing || (paymentMethod === 'Cash' && amountPaid < grandTotal)}
                 className="flex-[2] h-14 rounded-full font-bold text-lg transition-all hover:scale-[1.02] disabled:opacity-50 disabled:scale-100 btn-primary"
               >
-                {isProcessing ? 'Processing...' : 'Confirm Payment'}
+                {isProcessing ? 'Processing...' : `Confirm Payment ${settings?.shortcut_print ? `(${settings.shortcut_print})` : ''}`}
               </button>
             </div>
           </div>
@@ -794,6 +999,98 @@ const POS = () => {
                 <button type="submit" className="flex-1 h-12 rounded-full font-bold btn-primary">Save</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {editingItem && (
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card w-full max-w-sm rounded-2xl shadow-xl border overflow-hidden flex flex-col relative animate-in zoom-in-95 duration-200">
+            <div className="p-5 border-b bg-muted/30">
+              <h3 className="font-bold text-lg leading-tight">{editingItem.name}</h3>
+              <p className="text-sm text-muted-foreground mt-1">SKU: {editingItem.sku}</p>
+            </div>
+            
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Quantity</label>
+                <div className="relative">
+                  <input
+                    ref={qtyInputRef}
+                    type="number"
+                    min="1"
+                    value={editingItem.quantity}
+                    onChange={(e) => setEditingItem({...editingItem, quantity: Number(e.target.value) || 1})}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSaveItem();
+                      }
+                    }}
+                    className="w-full h-12 text-lg font-bold px-4 rounded-xl border bg-background focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Unit Price</label>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3 text-muted-foreground font-medium">{currencySymbol}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={editingItem.selling_price}
+                      onChange={(e) => setEditingItem({...editingItem, selling_price: Number(e.target.value) || 0})}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleSaveItem();
+                        }
+                      }}
+                      className="w-full h-12 text-base font-bold pl-8 pr-3 rounded-xl border bg-background focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Discount</label>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3 text-muted-foreground font-medium">{currencySymbol}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={editingItem.discount}
+                      onChange={(e) => setEditingItem({...editingItem, discount: Number(e.target.value) || 0})}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleSaveItem();
+                        }
+                      }}
+                      className="w-full h-12 text-base font-bold pl-8 pr-3 rounded-xl border bg-background focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-muted/30 border-t flex gap-3">
+              <button 
+                onClick={() => setEditingItem(null)}
+                className="flex-1 h-11 bg-white text-muted-foreground border font-bold rounded-xl hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveItem}
+                className="flex-[2] h-11 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition-colors shadow-sm"
+              >
+                Save Item (Enter)
+              </button>
+            </div>
           </div>
         </div>
       )}

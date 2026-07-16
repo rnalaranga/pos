@@ -21,6 +21,10 @@ async function updateDB() {
     "ALTER TABLE customers ADD COLUMN total_purchases DECIMAL(12,2) DEFAULT 0.00;",
     "ALTER TABLE customers ADD COLUMN rating ENUM('Standard', 'Bronze', 'Silver', 'Gold', 'Platinum') DEFAULT 'Standard';",
     
+    // Categories Hierarchy
+    "ALTER TABLE categories ADD COLUMN parent_id INT DEFAULT NULL;",
+    "ALTER TABLE categories ADD CONSTRAINT fk_category_parent FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE CASCADE;",
+    
     // Loyalty Points on Sales
     "ALTER TABLE sales ADD COLUMN loyalty_points_earned INT NOT NULL DEFAULT 0;",
     "ALTER TABLE sales ADD COLUMN loyalty_points_used INT NOT NULL DEFAULT 0;",
@@ -47,6 +51,16 @@ async function updateDB() {
       notes TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (customer_id) REFERENCES customers(id)
+    );`,
+    
+    // Service Materials Table
+    `CREATE TABLE IF NOT EXISTS service_materials (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      service_id INT NOT NULL,
+      material_id INT NOT NULL,
+      quantity DECIMAL(10,2) NOT NULL DEFAULT 1.00,
+      FOREIGN KEY (service_id) REFERENCES products(id) ON DELETE CASCADE,
+      FOREIGN KEY (material_id) REFERENCES products(id) ON DELETE CASCADE
     );`
   ];
 

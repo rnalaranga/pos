@@ -71,35 +71,71 @@ export const createSale = async (req: any, res: Response) => {
         [sale_id, item.product_id, item.quantity, item.unit_price, item.discount || 0, item.subtotal]
       );
 
-      // Only deduct stock if the sale is completed and it's not a service
-      if (status === 'Completed' && !item.is_service) {
-        await connection.execute(
-          `UPDATE products SET stock = stock - ? WHERE id = ?`,
-          [item.quantity, item.product_id]
-        );
+      if (status === 'Completed') {
+        if (!item.is_service) {
+          await connection.execute(
+            `UPDATE products SET stock = stock - ? WHERE id = ?`,
+            [item.quantity, item.product_id]
+          );
 
-        // Fetch previous warehouse balance
-        const [prevWs]: any = await connection.execute(
-          'SELECT stock FROM warehouse_stock WHERE product_id = ? AND warehouse_id = ? FOR UPDATE',
-          [item.product_id, warehouse_id]
-        );
-        const previous_balance = prevWs.length > 0 ? prevWs[0].stock : 0;
-        const current_balance = previous_balance - parseInt(item.quantity);
+          // Fetch previous warehouse balance
+          const [prevWs]: any = await connection.execute(
+            'SELECT stock FROM warehouse_stock WHERE product_id = ? AND warehouse_id = ? FOR UPDATE',
+            [item.product_id, warehouse_id]
+          );
+          const previous_balance = prevWs.length > 0 ? prevWs[0].stock : 0;
+          const current_balance = previous_balance - parseInt(item.quantity);
 
-        // Update warehouse stock
-        await connection.execute(
-          `INSERT INTO warehouse_stock (product_id, warehouse_id, stock) VALUES (?, ?, ?)
-           ON DUPLICATE KEY UPDATE stock = stock - ?`,
-          [item.product_id, warehouse_id, -item.quantity, item.quantity]
-        );
+          // Update warehouse stock
+          await connection.execute(
+            `INSERT INTO warehouse_stock (product_id, warehouse_id, stock) VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE stock = stock - ?`,
+            [item.product_id, warehouse_id, -item.quantity, item.quantity]
+          );
 
-        // Insert into stock_ledger
-        await connection.execute(
-          `INSERT INTO stock_ledger 
-           (product_id, warehouse_id, transaction_type, reference_id, qty_out, previous_balance, current_balance, user_id, notes) 
-           VALUES (?, ?, 'POS Sale', ?, ?, ?, ?, ?, ?)`,
-          [item.product_id, warehouse_id, invoice_number, item.quantity, previous_balance, current_balance, user_id, `Sold via POS`]
-        );
+          // Insert into stock_ledger
+          await connection.execute(
+            `INSERT INTO stock_ledger 
+             (product_id, warehouse_id, transaction_type, reference_id, qty_out, previous_balance, current_balance, user_id, notes) 
+             VALUES (?, ?, 'POS Sale', ?, ?, ?, ?, ?, ?)`,
+            [item.product_id, warehouse_id, invoice_number, item.quantity, previous_balance, current_balance, user_id, `Sold via POS`]
+          );
+        } else {
+          // It's a service. Deduct linked materials if any.
+          const [materials]: any = await connection.execute(
+            'SELECT material_id, quantity FROM service_materials WHERE service_id = ?',
+            [item.product_id]
+          );
+          
+          for (const mat of materials) {
+            const matQty = mat.quantity * item.quantity;
+            
+            await connection.execute(
+              `UPDATE products SET stock = stock - ? WHERE id = ?`,
+              [matQty, mat.material_id]
+            );
+            
+            const [prevWs]: any = await connection.execute(
+              'SELECT stock FROM warehouse_stock WHERE product_id = ? AND warehouse_id = ? FOR UPDATE',
+              [mat.material_id, warehouse_id]
+            );
+            const previous_balance = prevWs.length > 0 ? prevWs[0].stock : 0;
+            const current_balance = previous_balance - matQty;
+            
+            await connection.execute(
+              `INSERT INTO warehouse_stock (product_id, warehouse_id, stock) VALUES (?, ?, ?)
+               ON DUPLICATE KEY UPDATE stock = stock - ?`,
+              [mat.material_id, warehouse_id, -matQty, matQty]
+            );
+            
+            await connection.execute(
+              `INSERT INTO stock_ledger 
+               (product_id, warehouse_id, transaction_type, reference_id, qty_out, previous_balance, current_balance, user_id, notes) 
+               VALUES (?, ?, 'Service Consumption', ?, ?, ?, ?, ?, ?)`,
+              [mat.material_id, warehouse_id, invoice_number, matQty, previous_balance, current_balance, user_id, `Consumed for Service ID: ${item.product_id}`]
+            );
+          }
+        }
       }
     }
 

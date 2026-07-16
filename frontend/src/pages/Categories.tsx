@@ -1,5 +1,5 @@
 import { useDialogStore } from '../store/dialogStore';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import api from '../api/axios';
 
@@ -9,6 +9,7 @@ interface Category {
   description: string;
   icon: string;
   color_code: string;
+  parent_id?: number | null;
 }
 
 const Categories = () => {
@@ -18,7 +19,7 @@ const Categories = () => {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState({ name: '', description: '', color_code: '#3b82f6' });
+  const [formData, setFormData] = useState({ name: '', description: '', color_code: '#3b82f6', parent_id: '' });
 
   const fetchCategories = async () => {
     try {
@@ -42,10 +43,10 @@ const Categories = () => {
       if (editingId) {
         await api.put(`/categories/${editingId}`, formData);
       } else {
-        await api.post('/categories', formData);
+        await api.post('/categories', { ...formData, parent_id: formData.parent_id || null });
       }
       setIsModalOpen(false);
-      setFormData({ name: '', description: '', color_code: '#3b82f6' });
+      setFormData({ name: '', description: '', color_code: '#3b82f6', parent_id: '' });
       setEditingId(null);
       fetchCategories();
     } catch (error: any) {
@@ -54,7 +55,12 @@ const Categories = () => {
   };
 
   const handleEdit = (cat: Category) => {
-    setFormData({ name: cat.name, description: cat.description || '', color_code: cat.color_code || '#3b82f6' });
+    setFormData({ 
+      name: cat.name, 
+      description: cat.description || '', 
+      color_code: cat.color_code || '#3b82f6',
+      parent_id: cat.parent_id ? cat.parent_id.toString() : ''
+    });
     setEditingId(cat.id);
     setIsModalOpen(true);
   };
@@ -75,7 +81,7 @@ const Categories = () => {
         <h1 className="text-2xl font-bold tracking-tight">Categories</h1>
         <button 
           onClick={() => {
-            setFormData({ name: '', description: '', color_code: '#3b82f6' });
+            setFormData({ name: '', description: '', color_code: '#3b82f6', parent_id: '' });
             setEditingId(null);
             setIsModalOpen(true);
           }}
@@ -102,22 +108,43 @@ const Categories = () => {
               ) : categories.length === 0 ? (
                 <tr><td colSpan={4} className="text-center py-8 text-muted-foreground">No categories found.</td></tr>
               ) : (
-                categories.map((cat) => (
-                  <tr key={cat.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="w-6 h-6 rounded-full" style={{ backgroundColor: cat.color_code || '#3b82f6' }}></div>
-                    </td>
-                    <td className="px-6 py-4 font-medium">{cat.name}</td>
-                    <td className="px-6 py-4 text-muted-foreground">{cat.description}</td>
-                    <td className="px-6 py-4 text-right">
-                      <button onClick={() => handleEdit(cat)} className="text-blue-500 hover:text-blue-700 mr-3">
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button onClick={() => handleDelete(cat.id)} className="text-destructive hover:text-destructive/80">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
+                categories.filter(c => !c.parent_id).map((parentCat) => (
+                  <Fragment key={parentCat.id}>
+                    <tr className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="w-6 h-6 rounded-full" style={{ backgroundColor: parentCat.color_code || '#3b82f6' }}></div>
+                      </td>
+                      <td className="px-6 py-4 font-bold text-base">{parentCat.name}</td>
+                      <td className="px-6 py-4 text-muted-foreground">{parentCat.description}</td>
+                      <td className="px-6 py-4 text-right">
+                        <button onClick={() => handleEdit(parentCat)} className="text-blue-500 hover:text-blue-700 mr-3">
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => handleDelete(parentCat.id)} className="text-destructive hover:text-destructive/80">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                    {categories.filter(c => c.parent_id === parentCat.id).map(subCat => (
+                      <tr key={subCat.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors bg-slate-50/50">
+                        <td className="px-6 py-3 pl-12">
+                          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: subCat.color_code || '#3b82f6' }}></div>
+                        </td>
+                        <td className="px-6 py-3 pl-12 font-medium flex items-center gap-2">
+                          <span className="text-muted-foreground">↳</span> {subCat.name}
+                        </td>
+                        <td className="px-6 py-3 text-muted-foreground text-sm">{subCat.description}</td>
+                        <td className="px-6 py-3 text-right">
+                          <button onClick={() => handleEdit(subCat)} className="text-blue-500 hover:text-blue-700 mr-3">
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button onClick={() => handleDelete(subCat.id)} className="text-destructive hover:text-destructive/80">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </Fragment>
                 ))
               )}
             </tbody>
@@ -139,6 +166,19 @@ const Categories = () => {
                   className="w-full h-10 px-3 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                   required
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Parent Category</label>
+                <select 
+                  value={formData.parent_id}
+                  onChange={(e) => setFormData({...formData, parent_id: e.target.value})}
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">None (Main Category)</option>
+                  {categories.filter(c => !c.parent_id && c.id !== editingId).map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Description</label>

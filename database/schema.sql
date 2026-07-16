@@ -21,8 +21,10 @@ CREATE TABLE IF NOT EXISTS categories (
     description TEXT,
     icon VARCHAR(50),
     color_code VARCHAR(20),
+    parent_id INT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT NULL
+    updated_at DATETIME DEFAULT NULL,
+    FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE CASCADE
 );
 
 -- Suppliers Table
@@ -206,4 +208,13 @@ CREATE TABLE IF NOT EXISTS customer_payments (
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (customer_id) REFERENCES customers(id)
+);
+
+CREATE TABLE IF NOT EXISTS service_materials (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  service_id INT NOT NULL,
+  material_id INT NOT NULL,
+  quantity DECIMAL(10,2) NOT NULL DEFAULT 1.00,
+  FOREIGN KEY (service_id) REFERENCES products(id) ON DELETE CASCADE,
+  FOREIGN KEY (material_id) REFERENCES products(id) ON DELETE CASCADE
 );

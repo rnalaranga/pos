@@ -81,29 +81,27 @@ export default function MenuBar() {
   return (
     <div
       ref={ref}
-      className="relative flex items-center shrink-0 select-none"
+      className="relative flex items-center shrink-0 select-none bg-white z-[200] shadow-sm"
       style={{
-        height: 22,
-        paddingLeft: 8,
-        background: '#1c2460',
-        borderBottom: '1px solid rgba(247,173,30,0.18)',
-        zIndex: 200,
+        height: 28,
+        paddingLeft: 12,
+        borderBottom: '1px solid rgba(0,0,0,0.06)',
       }}
     >
       {/* Brand mark */}
       <div
-        className="flex items-center gap-1 mr-3 pr-3"
-        style={{ borderRight: '1px solid rgba(255,255,255,0.08)' }}
+        className="flex items-center gap-1.5 mr-4 pr-4"
+        style={{ borderRight: '1px solid rgba(0,0,0,0.08)' }}
       >
         <div
           style={{
-            width: 13, height: 13, borderRadius: 3,
-            background: 'linear-gradient(135deg, #F7AD1E, #e89a00)',
+            width: 16, height: 16, borderRadius: 4,
+            background: '#26316C',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 7, fontWeight: 900, color: '#26316C',
+            fontSize: 9, fontWeight: 900, color: 'white',
           }}
         >E</div>
-        <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em' }}>
+        <span style={{ fontSize: 11, fontWeight: 800, color: '#475569', letterSpacing: '0.05em' }}>
           EPOS
         </span>
       </div>
@@ -113,22 +111,22 @@ export default function MenuBar() {
         <div key={menu.label} className="relative h-full flex items-center">
           <button
             style={{
-              height: 22, padding: '0 8px',
-              fontSize: 10, fontWeight: 500,
-              color: openMenu === menu.label ? '#F7AD1E' : 'rgba(255,255,255,0.6)',
-              background: openMenu === menu.label ? 'rgba(247,173,30,0.1)' : 'transparent',
+              height: 28, padding: '0 12px',
+              fontSize: 11, fontWeight: 600,
+              color: openMenu === menu.label ? '#26316C' : '#64748B',
+              background: openMenu === menu.label ? 'rgba(38,49,108,0.06)' : 'transparent',
               border: 'none', cursor: 'pointer',
-              borderRadius: 3, transition: 'all 0.12s ease',
+              borderRadius: '4px', transition: 'all 0.1s ease',
               fontFamily: 'inherit',
             }}
             onMouseEnter={e => {
               if (openMenu) setOpenMenu(menu.label);
-              (e.currentTarget as HTMLElement).style.color = '#F7AD1E';
-              if (!openMenu) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)';
+              (e.currentTarget as HTMLElement).style.color = '#26316C';
+              if (!openMenu) (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.04)';
             }}
             onMouseLeave={e => {
               if (openMenu !== menu.label) {
-                (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.6)';
+                (e.currentTarget as HTMLElement).style.color = '#64748B';
                 (e.currentTarget as HTMLElement).style.background = 'transparent';
               }
             }}

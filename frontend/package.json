@@ -3,9 +3,10 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "main": "dist-electron/main.js",
+  "main": "dist-electron/main.cjs",
   "scripts": {
     "dev": "vite",
+    "start:electron": "vite build --config vite.electron.config.ts && electron .",
     "build": "tsc && vite build",
     "build:electron": "tsc && vite build && vite build --config vite.electron.config.ts && electron-builder",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
