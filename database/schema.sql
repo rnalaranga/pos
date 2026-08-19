@@ -192,8 +192,10 @@ CREATE TABLE IF NOT EXISTS supplier_payments (
     amount DECIMAL(12,2) NOT NULL,
     reference_number VARCHAR(100),
     notes TEXT,
+    grn_id INT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
+    FOREIGN KEY (grn_id) REFERENCES grn(id)
 );
 
 -- Customer Payments
