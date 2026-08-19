@@ -14,5 +14,35 @@ services:
       - db_data:/var/lib/mysql
       - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
 
+  backend:
+    build:
+      context: ./backend
+    container_name: pos_backend
+    restart: always
+    ports:
+      - "5001:5001"
+    environment:
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_NAME=pos_system
+      - DB_PORT=3306
+      - PORT=5001
+      - JWT_SECRET=supersecret123 # Change this in production
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_URL=/api
+    container_name: pos_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
 volumes:
   db_data:
