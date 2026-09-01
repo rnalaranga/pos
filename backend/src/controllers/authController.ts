@@ -28,6 +28,7 @@ export const loginUser = async (req: Request, res: Response) => {
         username: user.username,
         full_name: user.full_name,
         role: user.role,
+        modules: user.modules,
         token: generateToken(user.id, user.role),
       });
     } else {
@@ -41,7 +42,7 @@ export const loginUser = async (req: Request, res: Response) => {
 
 export const getMe = async (req: any, res: Response) => {
   try {
-    const [rows]: any = await db.execute('SELECT id, username, full_name, role, status, created_at FROM users WHERE id = ?', [req.user.id]);
+    const [rows]: any = await db.execute('SELECT id, username, full_name, role, status, modules, created_at FROM users WHERE id = ?', [req.user.id]);
     if (rows.length === 0) {
       return res.status(404).json({ message: 'User not found' });
     }

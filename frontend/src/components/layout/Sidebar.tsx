@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useWindowStore, MODULE_REGISTRY, type ModuleKey } from '../../store/windowStore';
 import { useSettingsStore } from '../../store/settingsStore';
+import { useAuthStore } from '../../store/authStore';
 import { ChevronRight, ChevronLeft, Building2, LayoutDashboard, ShoppingCart, Package, Tags, Archive, FileDown, Truck, Users, Warehouse, Settings, LineChart } from 'lucide-react';
 
 const MODULE_META: Record<string, { icon: React.ReactNode }> = {
@@ -21,7 +22,9 @@ export default function Sidebar() {
   const { openWindow } = useWindowStore();
   const { settings, fetchSettings } = useSettingsStore();
   const [isExpanded, setIsExpanded] = useState(false);
-  const modules = Object.keys(MODULE_REGISTRY) as ModuleKey[];
+  const { user } = useAuthStore();
+  const allModules = Object.keys(MODULE_REGISTRY) as ModuleKey[];
+  const modules = allModules.filter(key => user?.modules?.includes(key));
 
   useEffect(() => {
     fetchSettings();

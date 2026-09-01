@@ -4,7 +4,7 @@ import db from '../config/db';
 
 export const getUsers = async (req: Request, res: Response) => {
   try {
-    const [rows]: any = await db.execute('SELECT id, username, full_name, role, status, created_at FROM users');
+    const [rows]: any = await db.execute('SELECT id, username, full_name, role, status, created_at, modules FROM users');
     res.json(rows);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -12,16 +12,17 @@ export const getUsers = async (req: Request, res: Response) => {
 };
 
 export const createUser = async (req: Request, res: Response) => {
-  const { username, password, full_name, role } = req.body;
+  const { username, password, full_name, role, modules } = req.body;
   try {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
+    const modulesJson = JSON.stringify(modules || []);
 
     const [result]: any = await db.execute(
-      'INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)',
-      [username, hashedPassword, full_name, role || 'Cashier']
+      'INSERT INTO users (username, password, full_name, role, modules) VALUES (?, ?, ?, ?, ?)',
+      [username, hashedPassword, full_name, role || 'Cashier', modulesJson]
     );
-    res.status(201).json({ id: result.insertId, username, full_name, role });
+    res.status(201).json({ id: result.insertId, username, full_name, role, modules });
   } catch (error: any) {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ message: 'Username already exists' });
@@ -32,19 +33,20 @@ export const createUser = async (req: Request, res: Response) => {
 
 export const updateUser = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { full_name, role, status, password } = req.body;
+  const { full_name, role, status, password, modules } = req.body;
   try {
+    const modulesJson = JSON.stringify(modules || []);
     if (password) {
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
       await db.execute(
-        'UPDATE users SET full_name = ?, role = ?, status = ?, password = ? WHERE id = ?',
-        [full_name, role, status, hashedPassword, id]
+        'UPDATE users SET full_name = ?, role = ?, status = ?, password = ?, modules = ? WHERE id = ?',
+        [full_name, role, status, hashedPassword, modulesJson, id]
       );
     } else {
       await db.execute(
-        'UPDATE users SET full_name = ?, role = ?, status = ? WHERE id = ?',
-        [full_name, role, status, id]
+        'UPDATE users SET full_name = ?, role = ?, status = ?, modules = ? WHERE id = ?',
+        [full_name, role, status, modulesJson, id]
       );
     }
     res.json({ message: 'User updated successfully' });

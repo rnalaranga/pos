@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useDialogStore } from '../store/dialogStore';
 import { Pencil, Trash2, Shield, User, CircleDot } from 'lucide-react';
 import api from '../api/axios';
+import { MODULE_REGISTRY } from '../store/windowStore';
 
 export interface AppUser {
   id: number;
@@ -11,6 +12,7 @@ export interface AppUser {
   status: 'Active' | 'Inactive';
   created_at?: string;
   password?: string;
+  modules?: string[];
 }
 
 const Users = () => {
@@ -25,6 +27,7 @@ const Users = () => {
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<'Admin' | 'Manager' | 'Cashier' | 'Store Keeper'>('Cashier');
   const [status, setStatus] = useState<'Active' | 'Inactive'>('Active');
+  const [selectedModules, setSelectedModules] = useState<string[]>([]);
 
   const fetchUsers = async () => {
     try {
@@ -53,6 +56,7 @@ const Users = () => {
     setFullName('');
     setRole('Cashier');
     setStatus('Active');
+    setSelectedModules(['dashboard', 'pos']);
     setShowModal(true);
   };
 
@@ -63,6 +67,7 @@ const Users = () => {
     setFullName(u.full_name);
     setRole(u.role);
     setStatus(u.status);
+    setSelectedModules(u.modules || []);
     setShowModal(true);
   };
 
@@ -74,7 +79,8 @@ const Users = () => {
           full_name: fullName, 
           role, 
           status, 
-          password: password ? password : undefined 
+          password: password ? password : undefined,
+          modules: selectedModules
         });
         useDialogStore.getState().alert('Success', 'User updated successfully');
       } else {
@@ -82,7 +88,7 @@ const Users = () => {
           useDialogStore.getState().alert('Error', 'Password is required for new users');
           return;
         }
-        await api.post('/users', { username, password, full_name: fullName, role });
+        await api.post('/users', { username, password, full_name: fullName, role, modules: selectedModules });
         useDialogStore.getState().alert('Success', 'User created successfully');
       }
       setShowModal(false);
@@ -240,6 +246,27 @@ const Users = () => {
                   </select>
                 </div>
               </div>
+              
+              <div>
+                <label className="block text-sm font-semibold mb-2">Module Access</label>
+                <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto custom-scrollbar p-2 border border-border rounded-lg bg-slate-50/50">
+                  {Object.entries(MODULE_REGISTRY).map(([key, def]) => (
+                    <label key={key} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-100 p-1 rounded">
+                      <input 
+                        type="checkbox" 
+                        className="rounded border-slate-300 text-primary focus:ring-primary/50"
+                        checked={selectedModules.includes(key)}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedModules([...selectedModules, key]);
+                          else setSelectedModules(selectedModules.filter(m => m !== key));
+                        }}
+                      />
+                      {def.title}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex justify-end gap-3 pt-4 border-t border-border">
                 <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 rounded-lg font-medium hover:bg-muted transition-colors">
                   Cancel
