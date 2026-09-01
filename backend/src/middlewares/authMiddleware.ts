@@ -26,7 +26,7 @@ export const protect = (req: AuthRequest, res: Response, next: NextFunction) => 
 };
 
 export const adminOnly = (req: AuthRequest, res: Response, next: NextFunction) => {
-  if (req.user && req.user.role === 'Admin') {
+  if (req.user && req.user.role && req.user.role.trim().toLowerCase() === 'admin') {
     next();
   } else {
     res.status(403).json({ message: 'Not authorized as an admin' });
@@ -34,7 +34,7 @@ export const adminOnly = (req: AuthRequest, res: Response, next: NextFunction) =
 };
 
 export const managerOrAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
-  if (req.user && (req.user.role === 'Admin' || req.user.role === 'Manager')) {
+  if (req.user && req.user.role && (req.user.role.trim().toLowerCase() === 'admin' || req.user.role.trim().toLowerCase() === 'manager')) {
     next();
   } else {
     res.status(403).json({ message: 'Not authorized' });
