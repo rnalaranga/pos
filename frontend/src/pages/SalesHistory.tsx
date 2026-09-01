@@ -4,7 +4,6 @@ import { Calendar, Filter, Download, FileText } from 'lucide-react';
 import api from '../api/axios';
 import { renderToString } from 'react-dom/server';
 import { Receipt80mm } from '../components/pos/Receipt';
-import { useSettingsStore } from '../store/settingsStore';
 import { X, Printer } from 'lucide-react';
 
 export interface SaleRecord {
@@ -29,7 +28,6 @@ const SalesHistory = () => {
   const [sales, setSales] = useState<SaleRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [previewData, setPreviewData] = useState<any | null>(null);
-  const { settings } = useSettingsStore();
   const [settingsMap, setSettingsMap] = useState<any>({});
 
   // Filters
