@@ -371,6 +371,8 @@ const POS = () => {
             paymentMethod={paymentMethod}
             companyName={settings.company_name}
             companyAddress={settings.company_address}
+            companyPhone={settings.company_phone}
+            customerName={customer?.name || 'Walk-in'}
             footerMessage={settings.receipt_footer}
             currencySymbol={currencySymbol}
             companyLogo={settings.company_logo}

@@ -36,7 +36,7 @@ export const Receipt80mm = forwardRef<HTMLDivElement, ReceiptProps>(({
   companyLogo
 }, ref) => {
   return (
-    <div ref={ref} className="w-[80mm] p-4 text-black bg-white font-mono text-[15px] font-semibold leading-snug mx-auto border" style={{ printColorAdjust: 'exact' }}>
+    <div ref={ref} className="w-[80mm] p-4 text-black bg-white font-mono text-[15px] leading-snug mx-auto border" style={{ printColorAdjust: 'exact' }}>
       {/* Header */}
       <div className="text-center mb-4">
         {companyLogo && (
@@ -56,7 +56,7 @@ export const Receipt80mm = forwardRef<HTMLDivElement, ReceiptProps>(({
       </div>
 
       {/* Items Header */}
-      <div className="flex justify-between text-[15px] font-extrabold border-b border-black pb-1 mb-2">
+      <div className="flex justify-between text-[15px] font-bold border-b border-black pb-1 mb-2">
         <span className="w-1/2">Item</span>
         <span className="w-1/6 text-center">Qty</span>
         <span className="w-1/3 text-right">Total</span>
@@ -65,7 +65,7 @@ export const Receipt80mm = forwardRef<HTMLDivElement, ReceiptProps>(({
       {/* Items List */}
       <div className="mb-4 min-h-[50px]">
         {items.map((item, idx) => (
-          <div key={idx} className="flex justify-between text-[15px] font-bold mb-2">
+          <div key={idx} className="flex justify-between text-[15px] mb-2">
             <span className="w-1/2 pr-2" style={{ wordBreak: 'break-word', whiteSpace: 'normal' }}>{item.name}</span>
             <span className="w-1/6 text-center">{item.quantity}</span>
             <span className="w-1/3 text-right">{currencySymbol}{item.subtotal.toFixed(2)}</span>
@@ -74,7 +74,7 @@ export const Receipt80mm = forwardRef<HTMLDivElement, ReceiptProps>(({
       </div>
 
       {/* Totals */}
-      <div className="border-t border-black pt-2 border-dashed text-[15px] font-bold space-y-1">
+      <div className="border-t border-black pt-2 border-dashed text-[15px] space-y-1">
         <div className="flex justify-between"><span>Subtotal:</span> <span>{currencySymbol}{subtotal.toFixed(2)}</span></div>
         <div className="flex justify-between"><span>Discount:</span> <span>{currencySymbol}{discount.toFixed(2)}</span></div>
         <div className="flex justify-between"><span>Tax:</span> <span>{currencySymbol}{tax.toFixed(2)}</span></div>
@@ -84,14 +84,14 @@ export const Receipt80mm = forwardRef<HTMLDivElement, ReceiptProps>(({
       </div>
 
       {/* Payment Details */}
-      <div className="mt-4 text-[15px] font-bold">
+      <div className="mt-4 text-[15px]">
         <div className="flex justify-between"><span>Method:</span> <span>{paymentMethod}</span></div>
         <div className="flex justify-between"><span>Tendered:</span> <span>{currencySymbol}{amountPaid.toFixed(2)}</span></div>
         <div className="flex justify-between"><span>Change:</span> <span>{currencySymbol}{(amountPaid - total > 0 ? amountPaid - total : 0).toFixed(2)}</span></div>
       </div>
 
       {/* Footer */}
-      <div className="text-center mt-6 text-[15px] font-bold">
+      <div className="text-center mt-6 text-[15px]">
         <p>{footerMessage}</p>
         <p className="mt-2 text-[12px] font-normal">Powered by EPOS</p>
       </div>

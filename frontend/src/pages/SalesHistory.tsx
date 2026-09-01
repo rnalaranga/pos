@@ -154,6 +154,8 @@ const SalesHistory = () => {
           paymentMethod={previewData.payment_method}
           companyName={settingsMap.company_name}
           companyAddress={settingsMap.company_address}
+                  companyPhone={settingsMap.company_phone}
+                  customerName={previewData.customer_name || 'Walk-in'}
           footerMessage={settingsMap.receipt_footer}
           currencySymbol={settingsMap.currency_symbol}
           companyLogo={settingsMap.company_logo}
@@ -366,6 +368,8 @@ const SalesHistory = () => {
                   paymentMethod={previewData.payment_method}
                   companyName={settingsMap.company_name}
                   companyAddress={settingsMap.company_address}
+                  companyPhone={settingsMap.company_phone}
+                  customerName={previewData.customer_name || 'Walk-in'}
                   footerMessage={settingsMap.receipt_footer}
                   currencySymbol={settingsMap.currency_symbol}
                   companyLogo={settingsMap.company_logo}
