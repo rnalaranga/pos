@@ -17,7 +17,7 @@ interface Menu { label: string; items: MenuItem[]; }
 export default function MenuBar() {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const { openWindow, windows, cascadeWindows, tileHorizontal, tileVertical, closeAll } = useWindowStore();
-  const { logout } = useAuthStore();
+  const { logout, user } = useAuthStore();
   const navigate = useNavigate();
   const ref = useRef<HTMLDivElement>(null);
 
@@ -30,15 +30,15 @@ export default function MenuBar() {
     {
       label: 'File',
       items: [
-        { label: 'New Sale', shortcut: 'F5', action: () => openWindow('pos') },
-        { label: 'New Product', action: () => openWindow('products') },
+        ...(user?.modules?.includes('pos') ? [{ label: 'New Sale', shortcut: 'F5', action: () => openWindow('pos') }] : []),
+        ...(user?.modules?.includes('products') ? [{ label: 'New Product', action: () => openWindow('products') }] : []),
         { separator: true, label: '' },
         { label: 'Sign Out', action: () => { logout(); navigate('/login'); } },
       ]
     },
     {
       label: 'View',
-      items: (Object.keys(MODULE_REGISTRY) as ModuleKey[]).map(key => ({
+      items: (Object.keys(MODULE_REGISTRY) as ModuleKey[]).filter(key => user?.modules?.includes(key)).map(key => ({
         label: MODULE_REGISTRY[key].title,
         action: () => { openWindow(key); setOpenMenu(null); },
       }))
