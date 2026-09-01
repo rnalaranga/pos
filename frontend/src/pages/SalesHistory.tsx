@@ -204,9 +204,21 @@ const SalesHistory = () => {
   const totalFilteredSales = sales.reduce((sum, s) => sum + parseFloat(s.total_amount as any), 0);
 
   return (
-    <div className="flex flex-col h-full bg-background text-foreground gap-4">
+    <div className="flex flex-col h-full bg-background text-foreground printable-sales-history">
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          .printable-sales-history, .printable-sales-history * { visibility: visible; }
+          .printable-sales-history { position: absolute; left: 0; top: 0; width: 100%; height: auto; }
+          .no-print, .no-print * { display: none !important; }
+          .printable-sales-history th, .printable-sales-history td { padding: 4px 8px !important; font-size: 11px !important; }
+          .printable-sales-history table { border-collapse: collapse; width: 100%; }
+          .printable-sales-history th { border-bottom: 2px solid #000; }
+          .printable-sales-history td { border-bottom: 1px solid #ccc; }
+        }
+      `}</style>
       {/* Header & Filters */}
-      <div className="bg-white p-5 rounded-2xl border border-border shadow-sm shrink-0">
+      <div className="bg-white p-5 rounded-2xl border border-border shadow-sm shrink-0 no-print">
         <div className="flex justify-between items-end mb-4">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Sales History</h2>
@@ -253,8 +265,11 @@ const SalesHistory = () => {
             <button type="submit" className="h-10 flex-1 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors flex items-center justify-center shadow-sm">
               <Filter className="w-4 h-4 mr-1.5" /> Filter
             </button>
-            <button type="button" onClick={clearFilters} className="h-10 px-3 bg-muted text-muted-foreground rounded-lg font-medium hover:bg-muted/80 transition-colors border border-border">
+            <button type="button" onClick={clearFilters} className="h-10 px-3 bg-muted text-muted-foreground rounded-lg font-medium hover:bg-muted/80 transition-colors border border-border no-print">
               Clear
+            </button>
+            <button type="button" onClick={() => window.print()} className="h-10 px-4 bg-slate-800 text-white rounded-lg font-medium hover:bg-slate-700 transition-colors flex items-center shadow-sm no-print">
+              <Printer className="w-4 h-4 mr-1.5" /> Print
             </button>
           </div>
         </form>
@@ -272,7 +287,7 @@ const SalesHistory = () => {
                 <th className="px-6 py-4 font-semibold">Customer</th>
                 <th className="px-6 py-4 font-semibold">Payment</th>
                 <th className="px-6 py-4 text-right font-semibold">Amount</th>
-                <th className="px-6 py-4 text-center font-semibold">Receipt</th>
+                <th className="px-6 py-4 text-center font-semibold no-print">Receipt</th>
               </tr>
             </thead>
             <tbody>
@@ -307,7 +322,7 @@ const SalesHistory = () => {
                     <td className="px-6 py-4 text-right font-bold text-foreground">
                       Rs. {parseFloat(s.total_amount as any).toFixed(2)}
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 text-center no-print">
                       <button onClick={() => handlePreviewReceipt(s.id)} className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-100">
                         <FileText className="w-4 h-4" />
                       </button>
