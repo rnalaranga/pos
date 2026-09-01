@@ -206,8 +206,39 @@ const SalesHistory = () => {
   return (
     <div className="flex flex-col h-full bg-background text-foreground printable-sales-history">
       <style>{`
-        @media print {
+                @media print {
+          @page { size: auto; margin: 20mm; }
           body * { visibility: hidden; }
+          .printable-sales-history, .printable-sales-history * { visibility: visible; }
+          .printable-sales-history { position: absolute; left: 0; top: 0; width: 100%; min-height: 100vh; background: white; margin: 0; padding: 0; }
+          .no-print, .no-print * { display: none !important; }
+          
+          /* Crucial: remove all scroll restrictions for printing */
+          html, body {
+            height: auto !important;
+            overflow: visible !important;
+          }
+          .printable-sales-history, 
+          .printable-sales-history > div, 
+          .printable-sales-history .overflow-auto {
+            overflow: visible !important;
+            height: auto !important;
+            max-height: none !important;
+            display: block !important;
+          }
+          
+          .printable-sales-history th, .printable-sales-history td { 
+            padding: 6px 8px !important; 
+            font-size: 12px !important; 
+            color: black !important;
+          }
+          .printable-sales-history table { 
+            border-collapse: collapse; 
+            width: 100%; 
+          }
+          .printable-sales-history th { border-bottom: 2px solid #000; text-align: left; }
+          .printable-sales-history td { border-bottom: 1px solid #ccc; }
+        }
           .printable-sales-history, .printable-sales-history * { visibility: visible; }
           .printable-sales-history { position: absolute; left: 0; top: 0; width: 100%; height: auto; }
           .no-print, .no-print * { display: none !important; }
