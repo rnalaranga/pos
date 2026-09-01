@@ -303,6 +303,8 @@ const POS = () => {
               footerMessage={settings.receipt_footer}
               currencySymbol={currencySymbol}
               companyLogo={settings.company_logo}
+              companyPhone={settings.company_phone}
+              customerName={customer?.name || 'Walk-in'}
             />
           );
           
