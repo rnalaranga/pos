@@ -85,15 +85,18 @@ const POS = () => {
     
   const activeSubCatIds = activeSubCategories.map(c => c.id);
 
-  const displayProducts = products.filter(p => {
-    if (selectedSubCategory) {
-      return p.category_id === selectedSubCategory;
-    }
-    if (selectedMainCategory) {
-      return p.category_id === selectedMainCategory || activeSubCatIds.includes(p.category_id);
-    }
-    return true; // All items
+  let displayProducts = products.filter(p => {
+    if (selectedSubCategory) return p.category_id === selectedSubCategory;
+    if (selectedMainCategory) return p.category_id === selectedMainCategory || activeSubCatIds.includes(p.category_id);
+    return true;
   });
+  
+  if (!selectedMainCategory && !selectedSubCategory && !searchInput) {
+    displayProducts = [...displayProducts].sort((a, b) => (Number(b.total_sold) || 0) - (Number(a.total_sold) || 0)).slice(0, 10);
+  }
+  
+  const currentDisplayedList = searchInput ? filteredProducts : displayProducts;
+
   
   // Customer & Loyalty State
   const [customers, setCustomers] = useState<any[]>([]);
@@ -216,6 +219,53 @@ const POS = () => {
     setSearchIndex(-1); // reset selection on new search
   }, [searchInput, products]);
 
+
+  // Global Keyboard Navigation
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement as HTMLElement;
+      const isInput = activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT';
+      const isSearchFocused = activeEl.id === 'pos-search';
+      
+      // If modal is open, let modal handle it
+      if (editingItem || showPayment || showHeldBills || showNewCustomer) return;
+
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        if (!isInput || isSearchFocused) {
+          e.preventDefault();
+          setSearchIndex(prev => Math.min(prev + 1, currentDisplayedList.length - 1));
+        }
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        if (!isInput || isSearchFocused) {
+          e.preventDefault();
+          setSearchIndex(prev => Math.max(prev - 1, 0));
+        }
+      } else if (e.key === 'Enter') {
+        if (!isInput || isSearchFocused) {
+          e.preventDefault();
+          const target = searchIndex >= 0 ? currentDisplayedList[searchIndex] : currentDisplayedList[0];
+          if (target) {
+            handleProductClick(target);
+            setSearchInput('');
+            setSearchIndex(-1);
+            searchInputRef.current?.focus();
+          }
+        }
+      } else if (e.key === 'F2') {
+        e.preventDefault();
+        if (cart.length > 0) setShowPayment(true);
+      } else if (e.key === 'Escape') {
+        setSearchInput('');
+        setSearchIndex(-1);
+      } else if (!isInput && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        searchInputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [currentDisplayedList, searchIndex, editingItem, showPayment, showHeldBills, showNewCustomer, cart.length]);
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const target = searchIndex >= 0 ? filteredProducts[searchIndex] : filteredProducts[0];
@@ -226,13 +276,7 @@ const POS = () => {
     }
   };
 
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Escape') {
-      setSearchInput('');
-      setFilteredProducts([]);
-    }
-  };
-
+  
   const handleHoldBill = () => {
     if (cart.length === 0) {
       useDialogStore.getState().alert('Message', "Cart is empty!");
@@ -441,7 +485,7 @@ const POS = () => {
               type="text" 
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
+              
               placeholder="Search by Barcode, SKU, or Name (F1)" 
               className="w-full h-14 pl-14 pr-4 text-lg rounded-2xl outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all bg-white/90 backdrop-blur-sm border border-transparent shadow-lg text-foreground font-medium placeholder:text-muted-foreground/60"
               autoFocus
@@ -532,14 +576,12 @@ const POS = () => {
             {/* Product Grid */}
             <div className="flex-1 rounded-2xl overflow-y-auto custom-scrollbar">
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 content-start pb-4">
-                {searchInput ? (
-                  // Search Mode
-                  filteredProducts.map((p, idx) => (
+                {currentDisplayedList.map((p, idx) => (
                     <div 
-                      key={`search-${p.id}`}
+                      key={`prod-${p.id}`}
                       onClick={() => handleProductClick(p)}
-                      className={`glass-card p-4 min-h-[110px] cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] flex flex-col animate-in zoom-in-95 fade-in duration-300 border-2 shadow-sm ${idx === 0 ? 'border-primary bg-primary/10 shadow-primary/20' : 'border-transparent hover:border-primary/20'}`}
-                      style={{ animationDelay: `${(idx % 12) * 50}ms`, animationFillMode: 'both' }}
+                      className={`glass-card p-4 min-h-[110px] cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] flex flex-col animate-in zoom-in-95 fade-in duration-300 border-2 shadow-sm ${idx === searchIndex ? 'border-primary ring-2 ring-primary/30 bg-primary/5' : 'border-transparent hover:border-primary/20'}`}
+                      style={{ animationDelay: `${(idx % 12) * 20}ms`, animationFillMode: 'both' }}
                     >
                       <div className="font-extrabold text-[13px] leading-tight line-clamp-3 text-slate-800 tracking-tight mb-2">{p.name}</div>
                       <div className="flex justify-between items-end mt-auto">
@@ -547,31 +589,7 @@ const POS = () => {
                         <div className="font-black text-[14px] text-primary">{currencySymbol}{Number(p.selling_price).toFixed(2)}</div>
                       </div>
                     </div>
-                  ))
-                ) : (
-                  // Normal Mode
-                  <>
-                    {displayProducts.map((p, idx) => (
-                      <div 
-                        key={`prod-${p.id}`}
-                        onClick={() => handleProductClick(p)}
-                        className="glass-card p-4 min-h-[110px] cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] flex flex-col animate-in zoom-in-95 fade-in duration-300 border-2 border-transparent hover:border-primary/20 shadow-sm"
-                        style={{ animationDelay: `${(idx % 15) * 40}ms`, animationFillMode: 'both' }}
-                      >
-                        <div className="font-extrabold text-[13px] leading-tight line-clamp-3 text-slate-800 tracking-tight mb-2">{p.name}</div>
-                        <div className="flex justify-between items-end mt-auto">
-                          <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider px-2 py-0.5 bg-slate-100 rounded border border-slate-200">{p.sku || p.barcode || '---'}</div>
-                          <div className="font-black text-[14px] text-primary">{currencySymbol}{Number(p.selling_price).toFixed(2)}</div>
-                        </div>
-                      </div>
-                    ))}
-                    {!searchInput && displayProducts.length === 0 && (
-                      <div className="col-span-full flex flex-col items-center justify-center text-muted-foreground opacity-50 py-12">
-                        <p>No products in this category</p>
-                      </div>
-                    )}
-                  </>
-                )}
+                  ))}
                 
                 {searchInput && products.length === 0 && (
                   <div className="col-span-full flex flex-col items-center justify-center text-muted-foreground opacity-50 py-12">
@@ -852,6 +870,14 @@ const POS = () => {
                   autoFocus
                   value={amountPaid || ''}
                   onChange={(e) => setAmountPaid(parseFloat(e.target.value) || 0)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (!isProcessing && !(paymentMethod === 'Cash' && amountPaid < grandTotal)) {
+                        handleCheckout();
+                      }
+                    }
+                  }}
                   className="w-full h-14 px-4 text-2xl font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-center transition-all"
                   style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(0,0,0,0.1)', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.03)' }}
                 />
