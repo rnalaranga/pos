@@ -223,11 +223,15 @@ const Products = () => {
     setEditingId(null);
   };
 
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) || 
-    (p.barcode && p.barcode.includes(search)) ||
-    (p.sku && p.sku.toLowerCase().includes(search.toLowerCase()))
-  );
+  const searchTerms = search.toLowerCase().split(' ').filter(t => t.trim() !== '');
+  const filteredProducts = products.filter(p => {
+    const name = (p.name || '').toLowerCase();
+    const barcode = (p.barcode || '').toLowerCase();
+    const sku = (p.sku || '').toLowerCase();
+    return searchTerms.every(term => 
+      name.includes(term) || barcode.includes(term) || sku.includes(term)
+    );
+  });
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
   const paginatedProducts = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
