@@ -462,7 +462,7 @@ const POS = () => {
         }
       }
 
-      useDialogStore.getState().alert('Message', `Sale completed! Invoice: ${result.invoice_number}`);
+      useDialogStore.getState().alert('Message', `Sale completed! Invoice: ${result.invoice_number}`, 1000);
       setShowPayment(false);
       setAmountPaid(0);
     } catch (error) {
