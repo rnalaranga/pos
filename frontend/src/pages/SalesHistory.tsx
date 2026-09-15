@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useDialogStore } from '../store/dialogStore';
-import { Filter, Download, FileText, X, Printer, ChevronRight, Search } from 'lucide-react';
+import { Filter, Download, FileText, Printer, Search } from 'lucide-react';
 import api from '../api/axios';
 import { renderToString } from 'react-dom/server';
 import { Receipt80mm } from '../components/pos/Receipt';
@@ -32,10 +32,7 @@ const PAYMENT_COLORS: Record<string, string> = {
 const SalesHistory = () => {
   const [sales, setSales] = useState<SaleRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [previewData, setPreviewData] = useState<any | null>(null);
   const [settingsMap, setSettingsMap] = useState<any>({});
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   // Filters
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
@@ -50,8 +47,9 @@ const SalesHistory = () => {
 
   const fetchFiltersData = async () => {
     try {
-      const [uRes, sRes] = await Promise.all([api.get('/users'), api.get('/shifts/current')]);
+      const [uRes, sRes, stRes] = await Promise.all([api.get('/users'), api.get('/shifts/current'), api.get('/settings')]);
       setUsers(uRes.data);
+      setSettingsMap(stRes.data);
       if (sRes.data) setOpeningBalance(parseFloat(sRes.data.opening_balance) || 0);
     } catch { /* silent */ }
   };
@@ -84,69 +82,102 @@ const SalesHistory = () => {
     setTimeout(fetchSales, 0);
   };
 
-  const handlePreviewReceipt = async (saleId: number) => {
-    if (selectedId === saleId) { setPreviewData(null); setSelectedId(null); return; }
+  const openReceiptWindow = async (saleId: number) => {
     try {
-      setPreviewLoading(true);
-      setSelectedId(saleId);
       const [sRes, stRes] = await Promise.all([api.get(`/sales/${saleId}`), api.get('/settings')]);
-      setSettingsMap(stRes.data);
-      setPreviewData(sRes.data);
+      const sale = sRes.data;
+      const settings = stRes.data;
+      const sym = settings.currency_symbol || 'Rs.';
+
+      const receiptHtml = renderToString(
+        <Receipt80mm
+          invoiceNumber={sale.invoice_number}
+          cashierName={sale.cashier_name || 'System'}
+          date={new Date(sale.created_at).toLocaleString()}
+          items={sale.items.map((i: any) => ({
+            name: i.product_name, quantity: i.quantity,
+            unit_price: parseFloat(i.unit_price), subtotal: parseFloat(i.subtotal),
+          }))}
+          subtotal={parseFloat(sale.subtotal)}
+          discount={parseFloat(sale.discount)}
+          tax={parseFloat(sale.tax)}
+          total={parseFloat(sale.total_amount)}
+          amountPaid={parseFloat(sale.amount_paid)}
+          paymentMethod={sale.payment_method}
+          companyName={settings.company_name}
+          companyAddress={settings.company_address}
+          companyPhone={settings.company_phone}
+          customerName={sale.customer_name || 'Walk-in'}
+          footerMessage={settings.receipt_footer}
+          currencySymbol={sym}
+          companyLogo={settings.company_logo}
+        />
+      );
+
+      const w = window.open('', '_blank', 'width=420,height=700,scrollbars=yes,resizable=yes');
+      if (!w) return;
+      w.document.write(`<!DOCTYPE html><html><head>
+        <title>Receipt – ${sale.invoice_number}</title>
+        <meta charset="utf-8"/>
+        <style>
+          *{box-sizing:border-box;margin:0;padding:0;}
+          body{background:#f1f5f9;font-family:monospace;display:flex;flex-direction:column;align-items:center;min-height:100vh;}
+          .toolbar{width:100%;background:#1e293b;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px;position:sticky;top:0;z-index:10;}
+          .toolbar-title{color:#fff;font-size:13px;font-weight:bold;font-family:sans-serif;}
+          .toolbar-sub{color:#94a3b8;font-size:11px;font-family:sans-serif;}
+          .btn-print{background:#6366f1;color:#fff;border:none;border-radius:8px;padding:7px 18px;font-size:13px;font-weight:bold;cursor:pointer;font-family:sans-serif;display:flex;align-items:center;gap:6px;}
+          .btn-print:hover{background:#4f46e5;}
+          .btn-close{background:#475569;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:bold;cursor:pointer;font-family:sans-serif;}
+          .btn-close:hover{background:#334155;}
+          .receipt-wrap{padding:20px 16px 40px;display:flex;justify-content:center;}
+          .receipt-paper{background:#fff;box-shadow:0 4px 24px rgba(0,0,0,0.15);border:1px solid #e2e8f0;}
+          /* Receipt inline styles */
+          .flex{display:flex;}.justify-between{justify-content:space-between;}
+          .text-center{text-align:center;}.text-right{text-align:right;}
+          .font-bold{font-weight:bold;}.font-extrabold{font-weight:900;}
+          .w-1\\/2{width:50%;}.w-1\\/6{width:16.666%;}.w-1\\/3{width:33.333%;}
+          .border-b{border-bottom:1px dashed #000;}.border-t{border-top:1px solid #000;}.border-t-2{border-top:2px solid #000;}
+          .border-dashed{border-style:dashed;}
+          .mb-1{margin-bottom:4px;}.mb-2{margin-bottom:8px;}.mb-4{margin-bottom:16px;}
+          .mt-2{margin-top:8px;}.mt-4{margin-top:16px;}.mt-6{margin-top:24px;}
+          .pb-1{padding-bottom:4px;}.pb-2{padding-bottom:8px;}.pt-2{padding-top:8px;}
+          .py-1{padding-top:4px;padding-bottom:4px;}.p-4{padding:16px;}
+          .space-y-1>*+*{margin-top:4px;}
+          .text-xl{font-size:18px;}.text-2xl{font-size:22px;}
+          .pr-2{padding-right:8px;}.text-xs{font-size:11px;}
+          @media print{
+            .toolbar{display:none !important;}
+            body{background:#fff;}
+            .receipt-wrap{padding:0;}
+            .receipt-paper{box-shadow:none;border:none;}
+          }
+        </style>
+      </head><body>
+        <div class="toolbar">
+          <div>
+            <div class="toolbar-title">Receipt Preview</div>
+            <div class="toolbar-sub">${sale.invoice_number} &nbsp;·&nbsp; ${sym} ${parseFloat(sale.total_amount).toFixed(2)}</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-print" onclick="window.print()">
+              🖨 Print Receipt
+            </button>
+            <button class="btn-close" onclick="window.close()">✕ Close</button>
+          </div>
+        </div>
+        <div class="receipt-wrap">
+          <div class="receipt-paper">${receiptHtml}</div>
+        </div>
+      </body></html>`);
+      w.document.close();
+      w.focus();
     } catch {
       useDialogStore.getState().alert('Error', 'Failed to load receipt');
-    } finally {
-      setPreviewLoading(false);
     }
   };
 
-  const handlePrintReceipt = () => {
-    if (!previewData) return;
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-    const html = renderToString(
-      <Receipt80mm
-        invoiceNumber={previewData.invoice_number}
-        cashierName={previewData.cashier_name || 'System'}
-        date={new Date(previewData.created_at).toLocaleString()}
-        items={previewData.items.map((i: any) => ({
-          name: i.product_name, quantity: i.quantity,
-          unit_price: parseFloat(i.unit_price), subtotal: parseFloat(i.subtotal),
-        }))}
-        subtotal={parseFloat(previewData.subtotal)}
-        discount={parseFloat(previewData.discount)}
-        tax={parseFloat(previewData.tax)}
-        total={parseFloat(previewData.total_amount)}
-        amountPaid={parseFloat(previewData.amount_paid)}
-        paymentMethod={previewData.payment_method}
-        companyName={settingsMap.company_name}
-        companyAddress={settingsMap.company_address}
-        companyPhone={settingsMap.company_phone}
-        customerName={previewData.customer_name || 'Walk-in'}
-        footerMessage={settingsMap.receipt_footer}
-        currencySymbol={settingsMap.currency_symbol}
-        companyLogo={settingsMap.company_logo}
-      />
-    );
-    printWindow.document.write(`<html><head><title>Receipt ${previewData.invoice_number}</title>
-      <style>body{margin:0;padding:0;font-family:monospace;}
-      .flex{display:flex;}.justify-between{justify-content:space-between;}
-      .text-center{text-align:center;}.text-right{text-align:right;}
-      .font-bold{font-weight:bold;}.font-extrabold{font-weight:900;}
-      .w-1\\/2{width:50%;}.w-1\\/6{width:16.666%;}.w-1\\/3{width:33.333%;}
-      .border-b{border-bottom:1px dashed #000;}.border-t{border-top:1px solid #000;}
-      .mb-1{margin-bottom:4px;}.mb-2{margin-bottom:8px;}.mb-4{margin-bottom:16px;}
-      .mt-2{margin-top:8px;}.mt-4{margin-top:16px;}.mt-6{margin-top:24px;}
-      .pb-1{padding-bottom:4px;}.pb-2{padding-bottom:8px;}.pt-2{padding-top:8px;}
-      .py-1{padding-top:4px;padding-bottom:4px;}.p-4{padding:16px;}
-      .space-y-1>*+*{margin-top:4px;}
-      .text-xl{font-size:18px;}.text-2xl{font-size:22px;}
-      .border-t-2{border-top:2px solid #000;}.border-dashed{border-style:dashed;}
-      .pr-2{padding-right:8px;}.text-xs{font-size:11px;}
-      </style></head><body>${html}</body></html>`);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
-  };
+
+
 
   // Summaries
   const filteredSales = search
@@ -385,10 +416,9 @@ const SalesHistory = () => {
                     <p className="text-sm">No bills found matching criteria.</p>
                   </td></tr>
                 ) : (
-                  filteredSales.map((s) => (
+                   filteredSales.map((s) => (
                     <tr key={s.id}
-                      onClick={() => handlePreviewReceipt(s.id)}
-                      className={`border-b border-slate-100 hover:bg-primary/5 transition-colors cursor-pointer ${selectedId === s.id ? 'bg-primary/10 border-l-2 border-l-primary' : ''}`}>
+                      className="border-b border-slate-100 hover:bg-primary/5 transition-colors">
                       <td className="px-5 py-3">
                         <div className="font-semibold text-slate-800 text-xs">{new Date(s.created_at).toLocaleDateString()}</div>
                         <div className="text-[11px] text-slate-400">{new Date(s.created_at).toLocaleTimeString()}</div>
@@ -403,7 +433,13 @@ const SalesHistory = () => {
                       </td>
                       <td className="px-5 py-3 text-right font-bold text-slate-800 text-sm">{sym} {parseFloat(s.total_amount as any).toFixed(2)}</td>
                       <td className="px-5 py-3 text-center">
-                        <ChevronRight className={`w-4 h-4 mx-auto transition-all ${selectedId === s.id ? 'text-primary rotate-90' : 'text-slate-300'}`} />
+                        <button
+                          onClick={() => openReceiptWindow(s.id)}
+                          title="View Receipt"
+                          className="p-1.5 rounded-lg hover:bg-primary/10 text-slate-400 hover:text-primary transition-colors"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -413,83 +449,6 @@ const SalesHistory = () => {
           </div>
         </div>
 
-        {/* Side Receipt Preview Panel */}
-        <div className={`shrink-0 border-l border-border bg-white flex flex-col transition-all duration-300 ${previewData || previewLoading ? 'w-80' : 'w-0 overflow-hidden'}`}>
-          {/* Panel header */}
-          <div className="flex justify-between items-center px-4 py-3 border-b border-border shrink-0 bg-slate-50">
-            <span className="text-sm font-bold text-slate-700">Receipt Preview</span>
-            <div className="flex items-center gap-2">
-              {previewData && (
-                <button onClick={handlePrintReceipt}
-                  className="flex items-center gap-1 text-xs font-semibold text-white bg-primary hover:bg-primary/90 px-3 py-1.5 rounded-lg transition-colors">
-                  <Printer className="w-3.5 h-3.5" /> Print
-                </button>
-              )}
-              <button onClick={() => { setPreviewData(null); setSelectedId(null); }}
-                className="p-1 rounded-lg hover:bg-slate-200 transition-colors text-slate-500">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Panel body */}
-          <div className="flex-1 overflow-y-auto bg-slate-100 flex flex-col items-center py-4 px-2 gap-4">
-            {previewLoading ? (
-              <div className="flex flex-col items-center gap-3 mt-10">
-                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-xs text-slate-400">Loading receipt...</span>
-              </div>
-            ) : previewData ? (
-              <>
-                {/* Bill info strip */}
-                <div className="w-full bg-white rounded-xl p-3 border border-border text-xs space-y-1.5 shadow-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Invoice</span>
-                    <span className="font-bold text-primary font-mono">{previewData.invoice_number}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Date</span>
-                    <span className="font-semibold">{new Date(previewData.created_at).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Cashier</span>
-                    <span className="font-semibold">{previewData.cashier_name || 'System'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Total</span>
-                    <span className="font-black text-base text-primary">{sym} {parseFloat(previewData.total_amount).toFixed(2)}</span>
-                  </div>
-                </div>
-
-                {/* The receipt itself */}
-                <div className="bg-white shadow-md border border-slate-200 rounded overflow-hidden" style={{ width: '80mm' }}>
-                  <Receipt80mm
-                    invoiceNumber={previewData.invoice_number}
-                    cashierName={previewData.cashier_name || 'System'}
-                    date={new Date(previewData.created_at).toLocaleString()}
-                    items={previewData.items.map((i: any) => ({
-                      name: i.product_name, quantity: i.quantity,
-                      unit_price: parseFloat(i.unit_price), subtotal: parseFloat(i.subtotal),
-                    }))}
-                    subtotal={parseFloat(previewData.subtotal)}
-                    discount={parseFloat(previewData.discount)}
-                    tax={parseFloat(previewData.tax)}
-                    total={parseFloat(previewData.total_amount)}
-                    amountPaid={parseFloat(previewData.amount_paid)}
-                    paymentMethod={previewData.payment_method}
-                    companyName={settingsMap.company_name}
-                    companyAddress={settingsMap.company_address}
-                    companyPhone={settingsMap.company_phone}
-                    customerName={previewData.customer_name || 'Walk-in'}
-                    footerMessage={settingsMap.receipt_footer}
-                    currencySymbol={settingsMap.currency_symbol}
-                    companyLogo={settingsMap.company_logo}
-                  />
-                </div>
-              </>
-            ) : null}
-          </div>
-        </div>
       </div>
     </div>
   );
