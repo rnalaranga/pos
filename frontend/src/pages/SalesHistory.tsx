@@ -206,7 +206,7 @@ const SalesHistory = () => {
   return (
     <div className="flex flex-col h-full bg-background text-foreground printable-sales-history">
       <style>{`
-                @media print {
+        @media print {
           @page { size: auto; margin: 20mm; }
           body * { visibility: hidden; }
           .printable-sales-history, .printable-sales-history * { visibility: visible; }
@@ -237,14 +237,6 @@ const SalesHistory = () => {
             width: 100%; 
           }
           .printable-sales-history th { border-bottom: 2px solid #000; text-align: left; }
-          .printable-sales-history td { border-bottom: 1px solid #ccc; }
-        }
-          .printable-sales-history, .printable-sales-history * { visibility: visible; }
-          .printable-sales-history { position: absolute; left: 0; top: 0; width: 100%; height: auto; }
-          .no-print, .no-print * { display: none !important; }
-          .printable-sales-history th, .printable-sales-history td { padding: 4px 8px !important; font-size: 11px !important; }
-          .printable-sales-history table { border-collapse: collapse; width: 100%; }
-          .printable-sales-history th { border-bottom: 2px solid #000; }
           .printable-sales-history td { border-bottom: 1px solid #ccc; }
         }
       `}</style>
