@@ -76,8 +76,8 @@ export const createGRN = async (req: any, res: Response) => {
       // Insert into stock_ledger
       await connection.execute(
         `INSERT INTO stock_ledger 
-         (product_id, warehouse_id, transaction_type, reference_id, qty_in, previous_balance, current_balance, user_id, notes) 
-         VALUES (?, ?, 'GRN', ?, ?, ?, ?, ?, ?)`,
+         (product_id, warehouse_id, user_id, type, quantity, reason) 
+         VALUES (?, ?, ?, 'IN', ?, ?)`,
         [item.product_id, warehouse_id, grn_id, item.quantity, previous_balance, current_balance, user_id, `GRN Ref: ${reference_number}`]
       );
     }

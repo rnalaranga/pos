@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import Login from './pages/Login';
+import CustomerSelfRegister from './pages/CustomerSelfRegister';
 import { useAuthStore } from './store/authStore';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -26,6 +27,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/register-customer" element={<CustomerSelfRegister />} />
         
         {/* Main Application uses MDI Workspace instead of routing */}
         <Route path="/" element={

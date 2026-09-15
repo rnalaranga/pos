@@ -96,9 +96,9 @@ export const createSale = async (req: any, res: Response) => {
           // Insert into stock_ledger
           await connection.execute(
             `INSERT INTO stock_ledger 
-             (product_id, warehouse_id, transaction_type, reference_id, qty_out, previous_balance, current_balance, user_id, notes) 
-             VALUES (?, ?, 'POS Sale', ?, ?, ?, ?, ?, ?)`,
-            [item.product_id, warehouse_id, invoice_number, item.quantity, previous_balance, current_balance, user_id, `Sold via POS`]
+             (product_id, warehouse_id, user_id, type, quantity, reason) 
+             VALUES (?, ?, ?, 'OUT', ?, ?)`,
+            [item.product_id, warehouse_id, user_id, item.quantity, `POS Sale: ${invoice_number}`]
           );
         } else {
           // It's a service. Deduct linked materials if any.
@@ -130,9 +130,9 @@ export const createSale = async (req: any, res: Response) => {
             
             await connection.execute(
               `INSERT INTO stock_ledger 
-               (product_id, warehouse_id, transaction_type, reference_id, qty_out, previous_balance, current_balance, user_id, notes) 
-               VALUES (?, ?, 'Service Consumption', ?, ?, ?, ?, ?, ?)`,
-              [mat.material_id, warehouse_id, invoice_number, matQty, previous_balance, current_balance, user_id, `Consumed for Service ID: ${item.product_id}`]
+               (product_id, warehouse_id, user_id, type, quantity, reason) 
+               VALUES (?, ?, ?, 'OUT', ?, ?)`,
+              [mat.material_id, warehouse_id, user_id, matQty, `Service Consumption (Service ID: ${item.product_id}, Inv: ${invoice_number})`]
             );
           }
         }

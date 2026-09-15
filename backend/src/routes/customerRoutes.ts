@@ -4,6 +4,8 @@ import { getCustomers, createCustomer, updateCustomer, deleteCustomer, addCustom
 
 const router = express.Router();
 
+router.post('/register', createCustomer);
+
 router.route('/')
   .get(protect, getCustomers)
   .post(protect, createCustomer);

@@ -77,8 +77,8 @@ export const adjustStock = async (req: any, res: Response) => {
     // 5. Insert into stock_ledger
     await connection.execute(
       `INSERT INTO stock_ledger 
-       (product_id, warehouse_id, transaction_type, reference_id, qty_in, qty_out, previous_balance, current_balance, user_id, notes) 
-       VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?)`,
+       (product_id, warehouse_id, user_id, type, quantity, reason) 
+       VALUES (?, ?, ?, 'ADJUSTMENT', ?, ?)`,
       [product_id, wh_id, adjustment_type, qty_in, qty_out, previous_balance, current_balance, user_id, reason || null]
     );
 
@@ -147,16 +147,16 @@ export const transferStock = async (req: any, res: Response) => {
     // 5. Log Out from Source
     await connection.execute(
       `INSERT INTO stock_ledger 
-       (product_id, warehouse_id, transaction_type, qty_out, previous_balance, current_balance, user_id, notes) 
-       VALUES (?, ?, 'Transfer Out', ?, ?, ?, ?, ?)`,
+       (product_id, warehouse_id, user_id, type, quantity, reason) 
+       VALUES (?, ?, ?, 'TRANSFER', ?, ?)`,
       [product_id, from_warehouse_id, quantity, sourcePrev, sourceCurr, user_id, reason || `Transferred to Warehouse ${to_warehouse_id}`]
     );
 
     // 6. Log In to Dest
     await connection.execute(
       `INSERT INTO stock_ledger 
-       (product_id, warehouse_id, transaction_type, qty_in, previous_balance, current_balance, user_id, notes) 
-       VALUES (?, ?, 'Transfer In', ?, ?, ?, ?, ?)`,
+       (product_id, warehouse_id, user_id, type, quantity, reason) 
+       VALUES (?, ?, ?, 'TRANSFER', ?, ?)`,
       [product_id, to_warehouse_id, quantity, destPrev, destCurr, user_id, reason || `Transferred from Warehouse ${from_warehouse_id}`]
     );
 
