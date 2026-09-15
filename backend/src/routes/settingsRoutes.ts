@@ -5,7 +5,7 @@ import { getSettings, updateSettings } from '../controllers/settingsController';
 const router = express.Router();
 
 router.route('/')
-  .get(protect, getSettings)
+  .get(getSettings)
   .post(protect, adminOnly, updateSettings);
 
 export default router;
