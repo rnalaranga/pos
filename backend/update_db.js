@@ -107,6 +107,27 @@ async function updateDB() {
     console.log(`[ERROR] Failed to recalculate customer ratings:`, err.message);
   }
 
+  
+    console.log("Checking shifts table...");
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS shifts (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        opening_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        closing_time TIMESTAMP NULL,
+        opening_balance DECIMAL(12, 2) DEFAULT 0.00,
+        status ENUM('Open', 'Closed') DEFAULT 'Open',
+        expected_cash DECIMAL(12, 2) DEFAULT 0.00,
+        expected_card DECIMAL(12, 2) DEFAULT 0.00,
+        expected_credit DECIMAL(12, 2) DEFAULT 0.00,
+        actual_cash DECIMAL(12, 2) DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `);
+    console.log('[SUCCESS] shifts table created or exists.');
+
   console.log("\nDatabase update completed!");
   await db.end();
 }
