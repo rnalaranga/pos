@@ -144,3 +144,19 @@ export const getAdvancedReports = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Server error retrieving advanced reports' });
   }
 };
+
+export const getFastMovingProducts = async (req: Request, res: Response) => {
+  try {
+    const [rows] = await db.execute(`
+      SELECT p.name, SUM(si.quantity) as sold_qty 
+      FROM sales_items si
+      JOIN products p ON si.product_id = p.id
+      GROUP BY p.id
+      ORDER BY sold_qty DESC
+      LIMIT 10
+    `);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
