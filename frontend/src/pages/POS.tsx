@@ -1,10 +1,12 @@
 import { useDialogStore } from '../store/dialogStore';
 import { useEffect, useRef, useState } from 'react';
-import { Search, UserPlus, Banknote, Trash2, Star, Folder } from 'lucide-react';
+import { Search, UserPlus, Banknote, Trash2, Star, Folder, X } from 'lucide-react';
 import { usePosStore, Product } from '../store/posStore';
+import { useAuthStore } from '../store/authStore';
+import api from '../api/axios';
 import { renderToString } from 'react-dom/server';
 import { Receipt80mm } from '../components/pos/Receipt';
-import api from '../api/axios';
+
 import { useSettingsStore } from '../store/settingsStore';
 
 const COLORS = {
@@ -20,6 +22,55 @@ const POS = () => {
     cart, products, fetchProducts, addToCart, removeFromCart, updateCartItem, 
     subtotal, totalTax, totalDiscount, grandTotal, processSale, clearCart
   } = usePosStore();
+  const { shift, fetchCurrentShift } = useAuthStore();
+  const [openingBalance, setOpeningBalance] = useState(0);
+  const [isOpeningShift, setIsOpeningShift] = useState(false);
+  const [shiftSummary, setShiftSummary] = useState<any>(null);
+  const [showShiftSummary, setShowShiftSummary] = useState(false);
+  const [actualCash, setActualCash] = useState(0);
+  const [isClosingShift, setIsClosingShift] = useState(false);
+
+  const handleOpenShift = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsOpeningShift(true);
+    try {
+      await api.post('/shifts/open', { opening_balance: openingBalance });
+      await fetchCurrentShift();
+    } catch (err) {
+      useDialogStore.getState().alert('Error', 'Failed to open shift');
+    } finally {
+      setIsOpeningShift(false);
+    }
+  };
+
+  const loadShiftSummary = async () => {
+    if (!shift) return;
+    try {
+      const res = await api.get(`/shifts/${shift.id}/summary`);
+      setShiftSummary(res.data);
+      setActualCash(res.data.current_expected_cash);
+      setShowShiftSummary(true);
+    } catch (e) {
+      useDialogStore.getState().alert('Error', 'Failed to load shift summary');
+    }
+  };
+
+  const handleCloseShift = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!shift) return;
+    setIsClosingShift(true);
+    try {
+      await api.post(`/shifts/${shift.id}/close`, { actual_cash: actualCash });
+      await fetchCurrentShift();
+      setShowShiftSummary(false);
+      useDialogStore.getState().alert('Success', 'Shift closed successfully');
+    } catch (err) {
+      useDialogStore.getState().alert('Error', 'Failed to close shift');
+    } finally {
+      setIsClosingShift(false);
+    }
+  };
+
   
   const [searchInput, setSearchInput] = useState('');
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
@@ -472,8 +523,87 @@ const POS = () => {
     }
   };
 
+
+  if (!shift) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-slate-50 h-full">
+        <div className="bg-white p-8 rounded-2xl shadow-xl max-w-sm w-full text-center">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl font-bold text-blue-600">?</span>
+          </div>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">Open Register</h2>
+          <p className="text-sm text-slate-500 mb-6">Please enter the opening cash balance to start your shift.</p>
+          <form onSubmit={handleOpenShift}>
+            <input 
+              type="number" step="0.01" min="0" required autoFocus
+              value={openingBalance || ''} 
+              onChange={e => setOpeningBalance(parseFloat(e.target.value) || 0)}
+              className="w-full h-12 px-4 text-center text-xl font-bold rounded-xl border border-slate-200 mb-4 focus:ring-2 focus:ring-primary focus:border-transparent"
+              placeholder="0.00"
+            />
+            <button type="submit" disabled={isOpeningShift} className="w-full h-12 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition-colors">
+              {isOpeningShift ? 'Opening...' : 'Start Shift'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-1 gap-4 overflow-hidden h-full">
+      {showShiftSummary && shiftSummary && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-full">
+            <div className="p-6 bg-slate-50 border-b border-border flex justify-between items-center shrink-0">
+              <h2 className="text-xl font-bold">End of Day (Close Shift)</h2>
+              <button onClick={() => setShowShiftSummary(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 overflow-y-auto">
+              <div className="space-y-4 mb-6">
+                <div className="flex justify-between p-3 bg-slate-50 rounded-lg">
+                  <span className="text-slate-600">Opening Balance</span>
+                  <span className="font-bold">{currencySymbol}{Number(shiftSummary.opening_balance).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between p-3 bg-green-50 text-green-700 rounded-lg border border-green-100">
+                  <span className="font-medium">Total Cash Sales</span>
+                  <span className="font-bold">{currencySymbol}{Number(shiftSummary.current_expected_cash - shiftSummary.opening_balance).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between p-3 bg-blue-50 text-blue-700 rounded-lg border border-blue-100">
+                  <span className="font-medium">Total Card Sales</span>
+                  <span className="font-bold">{currencySymbol}{Number(shiftSummary.current_expected_card).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between p-3 bg-slate-800 text-white rounded-lg shadow-inner">
+                  <span className="font-medium">Expected Cash in Drawer</span>
+                  <span className="font-bold text-lg">{currencySymbol}{Number(shiftSummary.current_expected_cash).toFixed(2)}</span>
+                </div>
+              </div>
+
+              <form onSubmit={handleCloseShift}>
+                <label className="block text-sm font-bold text-slate-700 mb-2 text-center">Actual Cash Counted</label>
+                <input 
+                  type="number" step="0.01" min="0" required autoFocus
+                  value={actualCash || ''} 
+                  onChange={e => setActualCash(parseFloat(e.target.value) || 0)}
+                  className="w-full h-14 px-4 text-center text-3xl font-bold rounded-xl border-2 border-primary/20 bg-primary/5 focus:bg-white mb-6 focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                />
+                
+                {actualCash - shiftSummary.current_expected_cash !== 0 && (
+                  <div className={`mb-6 p-4 rounded-xl text-center font-bold ${actualCash < shiftSummary.current_expected_cash ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                    Difference: {actualCash < shiftSummary.current_expected_cash ? 'Short ' : 'Over '} 
+                    {currencySymbol}{Math.abs(actualCash - shiftSummary.current_expected_cash).toFixed(2)}
+                  </div>
+                )}
+
+                <button type="submit" disabled={isClosingShift} className="w-full h-14 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-900 transition-colors flex items-center justify-center gap-2">
+                  {isClosingShift ? 'Closing...' : 'Confirm & Close Shift'}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* LEFT SIDE - Product Search and Grid */}
       <div className="flex-[3] flex flex-col gap-4 relative min-w-0">
         <form onSubmit={handleSearchSubmit} className="relative shrink-0">
@@ -809,6 +939,10 @@ const POS = () => {
               Cancel
             </button>
           </div>
+          
+          <button onClick={loadShiftSummary} className="w-full h-9 rounded-xl font-bold transition-all hover:bg-slate-800 active:scale-95 bg-slate-700 text-white text-[11px] border border-slate-900 uppercase tracking-wide shadow-sm">
+            Close Shift (EOD)
+          </button>
           
           <button 
             onClick={() => {
