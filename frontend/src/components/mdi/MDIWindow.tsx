@@ -257,7 +257,7 @@ export default function MDIWindow({ win, workspaceRef }: Props) {
         className="flex-1 overflow-auto custom-scrollbar flex flex-col p-6 relative"
         style={{ fontSize: '13px', background: '#F8FAFC' }}
       >
-        <ModuleRenderer module={win.module} />
+        <ModuleRenderer module={win.module} win={win} />
       </div>
     </div>
   );

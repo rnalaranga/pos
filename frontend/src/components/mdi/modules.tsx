@@ -15,12 +15,13 @@ const Reports    = lazy(() => import('../../pages/Reports'));
 const Warehouses = lazy(() => import('../../pages/Warehouses'));
 const Users      = lazy(() => import('../../pages/Users'));
 const SalesHistory = lazy(() => import('../../pages/SalesHistory'));
+const ReceiptPreview = lazy(() => import('../../pages/ReceiptPreview'));
 
 const Loading = () => (
   <div className="flex h-full items-center justify-center text-xs text-muted-foreground">Loading...</div>
 );
 
-const MODULE_COMPONENTS: Record<ModuleKey, React.ComponentType> = {
+const MODULE_COMPONENTS: Record<ModuleKey, React.ComponentType<any>> = {
   dashboard:  Dashboard,
   pos:        POS,
   products:   Products,
@@ -34,13 +35,14 @@ const MODULE_COMPONENTS: Record<ModuleKey, React.ComponentType> = {
   warehouses: Warehouses,
   users:      Users,
   sales_history: SalesHistory,
+  receipt_preview: ReceiptPreview,
 };
 
-export function ModuleRenderer({ module }: { module: ModuleKey }) {
+export function ModuleRenderer({ module, win }: { module: ModuleKey, win?: any }) {
   const Component = MODULE_COMPONENTS[module];
   return (
     <Suspense fallback={<Loading />}>
-      <Component />
+      <Component win={win} />
     </Suspense>
   );
 }

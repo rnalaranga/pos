@@ -3,7 +3,7 @@ import { create } from 'zustand';
 export type ModuleKey = 
   | 'dashboard' | 'pos' | 'products' | 'categories' 
   | 'inventory' | 'grn' | 'suppliers' | 'customers' 
-  | 'settings' | 'reports' | 'warehouses' | 'users' | 'sales_history';
+  | 'settings' | 'reports' | 'warehouses' | 'users' | 'sales_history' | 'receipt_preview';
 
 export interface WinState {
   id: string;
@@ -20,6 +20,7 @@ export interface WinState {
   isMaximized: boolean;
   prevBounds?: { x: number; y: number; width: number; height: number };
   zIndex: number;
+  payload?: any;
 }
 
 export interface ModuleDef {
@@ -45,12 +46,13 @@ export const MODULE_REGISTRY: Record<ModuleKey, ModuleDef> = {
   reports:    { title: 'Reports',                icon: '▨',  defaultWidth: 950,  defaultHeight: 640, minWidth: 500, minHeight: 380 },
   users:      { title: 'User Management',        icon: '👥', defaultWidth: 900,  defaultHeight: 600, minWidth: 600, minHeight: 400 },
   sales_history: { title: 'Sales History',       icon: '🧾', defaultWidth: 1000, defaultHeight: 650, minWidth: 700, minHeight: 450 },
+  receipt_preview: { title: 'Receipt Preview',   icon: '📄', defaultWidth: 400,  defaultHeight: 650, minWidth: 350, minHeight: 400 },
 };
 
 interface WindowStore {
   windows: WinState[];
   zCounter: number;
-  openWindow: (module: ModuleKey) => void;
+  openWindow: (module: ModuleKey, payload?: any) => void;
   closeWindow: (id: string) => void;
   focusWindow: (id: string) => void;
   minimizeWindow: (id: string) => void;
@@ -88,10 +90,10 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
   windows: [],
   zCounter: 100,
 
-  openWindow: (module) => {
+  openWindow: (module, payload) => {
     const { windows, zCounter } = get();
-    // If already open, focus it
-    const existing = windows.find(w => w.module === module);
+    // If already open with the SAME payload (or no payload), focus it
+    const existing = windows.find(w => w.module === module && JSON.stringify(w.payload) === JSON.stringify(payload));
     if (existing) {
       if (existing.isMinimized) {
         set(s => ({
@@ -116,7 +118,7 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
     const newWin: WinState = {
       id: `${module}_${Date.now()}`,
       module,
-      title: def.title,
+      title: payload?.title || def.title,
       icon: def.icon,
       x: saved ? Math.min(saved.x, maxX) : Math.min(40 + cascade, maxX),
       y: saved ? Math.min(saved.y, maxY) : Math.min(40 + cascade, maxY),
@@ -127,6 +129,7 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
       isMinimized: false,
       isMaximized: false,
       zIndex: zCounter + 1,
+      payload,
     };
 
     set(s => ({ windows: [...s.windows, newWin], zCounter: s.zCounter + 1 }));
