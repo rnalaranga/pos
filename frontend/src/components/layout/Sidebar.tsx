@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useWindowStore, MODULE_REGISTRY, type ModuleKey } from '../../store/windowStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useAuthStore } from '../../store/authStore';
-import { ChevronRight, ChevronLeft, Building2, LayoutDashboard, ShoppingCart, Package, Tags, Archive, FileDown, Truck, Users, Warehouse, Settings, LineChart } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Building2, LayoutDashboard, ShoppingCart, Package, Tags, Archive, FileDown, Truck, Users, Warehouse, Settings, LineChart, LogOut } from 'lucide-react';
 
 const MODULE_META: Record<string, { icon: React.ReactNode }> = {
   dashboard:  { icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -22,7 +22,7 @@ export default function Sidebar() {
   const { openWindow } = useWindowStore();
   const { settings, fetchSettings } = useSettingsStore();
   const [isExpanded, setIsExpanded] = useState(false);
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const allModules = Object.keys(MODULE_REGISTRY) as ModuleKey[];
   const modules = allModules.filter(key => user?.modules?.includes(key));
 
@@ -125,6 +125,35 @@ export default function Sidebar() {
             </button>
           );
         })}
+      </div>
+
+      <div className="p-2 border-t border-border shrink-0">
+        <button
+          onClick={logout}
+          title="Sign Out"
+          className="w-full flex items-center rounded-lg transition-all text-red-500 hover:bg-red-50 hover:text-red-600"
+          style={{
+            height: 38,
+            padding: '0 8px',
+            fontSize: 12, fontWeight: 600,
+            cursor: 'pointer', whiteSpace: 'nowrap',
+            justifyContent: isExpanded ? 'flex-start' : 'center'
+          }}
+        >
+          <span className="flex items-center justify-center" style={{ width: 24, minWidth: 24 }}>
+            <LogOut className="w-5 h-5" />
+          </span>
+          <span 
+            className="ml-3 text-left overflow-hidden transition-all duration-300"
+            style={{ 
+              opacity: isExpanded ? 1 : 0,
+              width: isExpanded ? 'auto' : 0,
+              display: isExpanded ? 'block' : 'none'
+            }}
+          >
+            Sign Out
+          </span>
+        </button>
       </div>
     </div>
   );
