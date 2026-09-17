@@ -160,3 +160,26 @@ export const getFastMovingProducts = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+export const getDailySales = async (req: Request, res: Response) => {
+  try {
+    const [rows] = await db.execute(`
+      SELECT 
+        DATE(created_at) as date,
+        COUNT(id) as total_invoices,
+        COALESCE(SUM(total_amount), 0) as total_sales,
+        COALESCE(SUM(CASE WHEN payment_method = 'Cash' THEN amount_paid ELSE 0 END), 0) as cash_sales,
+        COALESCE(SUM(CASE WHEN payment_method = 'Card' THEN amount_paid ELSE 0 END), 0) as card_sales,
+        COALESCE(SUM(CASE WHEN payment_method = 'Credit' THEN total_amount ELSE 0 END), 0) as credit_sales
+      FROM sales
+      WHERE status = 'Completed'
+      GROUP BY DATE(created_at)
+      ORDER BY date DESC
+      LIMIT 30
+    `);
+    res.json(rows);
+  } catch (error) {
+    console.error("Daily Sales Error:", error);
+    res.status(500).json({ message: 'Server error retrieving daily sales' });
+  }
+};

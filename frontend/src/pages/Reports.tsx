@@ -11,7 +11,8 @@ const Reports = () => {
   const [topProducts, setTopProducts] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);
   const [advancedReports, setAdvancedReports] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState('shift'); // 'shift', 'products', 'invoices', 'advanced'
+  const [dailySales, setDailySales] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState('shift'); // 'shift', 'products', 'invoices', 'advanced', 'daily'
   const { currencySymbol } = useSettingsStore();
   
   // Invoice Filters
@@ -58,11 +59,21 @@ const Reports = () => {
     }
   };
 
+  const fetchDailySales = async () => {
+    try {
+      const res = await api.get('/reports/daily-sales');
+      setDailySales(res.data);
+    } catch (error) {
+      console.error("Failed to load daily sales");
+    }
+  };
+
   useEffect(() => {
     fetchShiftSummary(reportDate);
     fetchTopProducts();
     fetchSales();
     fetchAdvancedReports();
+    fetchDailySales();
   }, [reportDate]);
 
   const filteredSales = sales.filter(s => {
@@ -123,6 +134,12 @@ const Reports = () => {
           className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'advanced' ? 'bg-background shadow-sm border text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
         >
           Advanced Reports (ERP)
+        </button>
+        <button 
+          onClick={() => setActiveTab('daily')}
+          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'daily' ? 'bg-background shadow-sm border text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+        >
+          Daily Cash Balances
         </button>
       </div>
 
@@ -350,6 +367,44 @@ const Reports = () => {
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      ) : activeTab === 'daily' ? (
+        <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden printable-report">
+          <div className="p-4 border-b bg-muted/30 flex justify-between items-center">
+            <h3 className="font-semibold flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-primary" /> Daily Cash & Sales Balances
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-muted text-muted-foreground uppercase text-xs">
+                <tr>
+                  <th className="px-6 py-4 font-medium">Date</th>
+                  <th className="px-6 py-4 font-medium text-center">Invoices</th>
+                  <th className="px-6 py-4 font-medium text-right">Cash Sales</th>
+                  <th className="px-6 py-4 font-medium text-right">Card Sales</th>
+                  <th className="px-6 py-4 font-medium text-right text-orange-600">Credit Sales</th>
+                  <th className="px-6 py-4 font-medium text-right">Total Sales</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dailySales.length === 0 ? (
+                  <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">No daily sales found.</td></tr>
+                ) : (
+                  dailySales.map((row: any, i: number) => (
+                    <tr key={i} className="border-b last:border-0 hover:bg-muted/30">
+                      <td className="px-6 py-4 font-medium">{new Date(row.date).toLocaleDateString()}</td>
+                      <td className="px-6 py-4 text-center">{row.total_invoices}</td>
+                      <td className="px-6 py-4 text-right font-semibold text-green-600">{currencySymbol}{Number(row.cash_sales).toFixed(2)}</td>
+                      <td className="px-6 py-4 text-right font-semibold text-blue-600">{currencySymbol}{Number(row.card_sales).toFixed(2)}</td>
+                      <td className="px-6 py-4 text-right font-semibold text-orange-600">{currencySymbol}{Number(row.credit_sales).toFixed(2)}</td>
+                      <td className="px-6 py-4 text-right font-bold text-primary">{currencySymbol}{Number(row.total_sales).toFixed(2)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       ) : null}
