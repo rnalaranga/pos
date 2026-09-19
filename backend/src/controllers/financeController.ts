@@ -6,7 +6,7 @@ export const getExpenses = async (req: Request, res: Response) => {
   try {
     const { startDate, endDate } = req.query;
     let query = `
-      SELECT e.*, u.name as user_name 
+      SELECT e.*, u.full_name as user_name 
       FROM expenses e 
       JOIN users u ON e.user_id = u.id 
     `;
@@ -59,7 +59,7 @@ export const getBankDeposits = async (req: Request, res: Response) => {
   try {
     const { startDate, endDate } = req.query;
     let query = `
-      SELECT b.*, u.name as user_name 
+      SELECT b.*, u.full_name as user_name 
       FROM bank_deposits b 
       JOIN users u ON b.user_id = u.id 
     `;
