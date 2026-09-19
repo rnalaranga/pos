@@ -1191,8 +1191,8 @@ const POS = () => {
                     ref={qtyInputRef}
                     type="number"
                     min="1"
-                    value={editingItem.quantity}
-                    onChange={(e) => setEditingItem({...editingItem, quantity: Number(e.target.value) || 1})}
+                    value={editingItem.quantity || ''}
+                    onChange={(e) => setEditingItem({...editingItem, quantity: e.target.value === '' ? 0 : Number(e.target.value)})}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
@@ -1213,8 +1213,8 @@ const POS = () => {
                       type="number"
                       min="0"
                       step="0.01"
-                      value={editingItem.selling_price}
-                      onChange={(e) => setEditingItem({...editingItem, selling_price: Number(e.target.value) || 0})}
+                      value={editingItem.selling_price === 0 ? '' : editingItem.selling_price}
+                      onChange={(e) => setEditingItem({...editingItem, selling_price: e.target.value === '' ? 0 : Number(e.target.value)})}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
@@ -1234,8 +1234,8 @@ const POS = () => {
                       type="number"
                       min="0"
                       step="0.01"
-                      value={editingItem.discount}
-                      onChange={(e) => setEditingItem({...editingItem, discount: Number(e.target.value) || 0})}
+                      value={editingItem.discount === 0 ? '' : editingItem.discount}
+                      onChange={(e) => setEditingItem({...editingItem, discount: e.target.value === '' ? 0 : Number(e.target.value)})}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
