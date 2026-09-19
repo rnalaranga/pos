@@ -16,10 +16,11 @@ export const getProducts = async (req: Request, res: Response) => {
     
     const productsWithMaterials = rows.map((p: any) => ({
       ...p,
+      is_service: Boolean(p.is_service),
       materials: materials.filter((m: any) => m.service_id === p.id).map((m: any) => ({
         material_id: m.material_id,
         quantity: m.quantity,
-        is_selective: m.is_selective,
+        is_selective: Boolean(m.is_selective),
         color_code: m.color_code
       }))
     }));
