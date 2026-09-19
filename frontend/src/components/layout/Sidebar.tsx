@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useWindowStore, MODULE_REGISTRY, type ModuleKey } from '../../store/windowStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useAuthStore } from '../../store/authStore';
-import { ChevronRight, ChevronLeft, Building2, LayoutDashboard, ShoppingCart, Package, Tags, Archive, FileDown, Truck, Users, Warehouse, Settings, LineChart, LogOut } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Building2, LayoutDashboard, ShoppingCart, Package, Tags, Archive, FileDown, Truck, Users, Warehouse, Settings, LineChart, LogOut, Wallet } from 'lucide-react';
 
 const MODULE_META: Record<string, { icon: React.ReactNode }> = {
   dashboard:  { icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -14,6 +14,7 @@ const MODULE_META: Record<string, { icon: React.ReactNode }> = {
   suppliers:  { icon: <Truck className="w-5 h-5" /> },
   customers:  { icon: <Users className="w-5 h-5" /> },
   warehouses: { icon: <Warehouse className="w-5 h-5" /> },
+  finance:    { icon: <Wallet className="w-5 h-5" /> },
   settings:   { icon: <Settings className="w-5 h-5" /> },
   reports:    { icon: <LineChart className="w-5 h-5" /> },
 };

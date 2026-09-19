@@ -18,6 +18,7 @@ import grnRoutes from './routes/grnRoutes';
 import reportRoutes from './routes/reportRoutes';
 import settingsRoutes from './routes/settingsRoutes';
 import warehouseRoutes from './routes/warehouseRoutes';
+import financeRoutes from './routes/financeRoutes';
 
 dotenv.config();
 
@@ -46,6 +47,7 @@ app.use('/api/grn', grnRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/warehouses', warehouseRoutes);
+app.use('/api/finance', financeRoutes);
 
 // Socket.io for real-time updates (e.g. inventory alerts)
 io.on('connection', (socket) => {

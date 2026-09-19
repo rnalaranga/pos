@@ -567,8 +567,20 @@ const POS = () => {
                 </div>
                 <div className="flex justify-between p-3 bg-green-50 text-green-700 rounded-lg border border-green-100">
                   <span className="font-medium">Total Cash Sales</span>
-                  <span className="font-bold">{currencySymbol}{Number(shiftSummary.current_expected_cash - shiftSummary.opening_balance).toFixed(2)}</span>
+                  <span className="font-bold">{currencySymbol}{Number(shiftSummary.current_expected_cash + shiftSummary.total_expenses + shiftSummary.total_deposits - shiftSummary.opening_balance).toFixed(2)}</span>
                 </div>
+                {shiftSummary.total_expenses > 0 && (
+                  <div className="flex justify-between p-3 bg-red-50 text-red-700 rounded-lg border border-red-100">
+                    <span className="font-medium">Expenses Paid</span>
+                    <span className="font-bold">-{currencySymbol}{Number(shiftSummary.total_expenses).toFixed(2)}</span>
+                  </div>
+                )}
+                {shiftSummary.total_deposits > 0 && (
+                  <div className="flex justify-between p-3 bg-orange-50 text-orange-700 rounded-lg border border-orange-100">
+                    <span className="font-medium">Bank Deposits</span>
+                    <span className="font-bold">-{currencySymbol}{Number(shiftSummary.total_deposits).toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between p-3 bg-blue-50 text-blue-700 rounded-lg border border-blue-100">
                   <span className="font-medium">Total Card Sales</span>
                   <span className="font-bold">{currencySymbol}{Number(shiftSummary.current_expected_card).toFixed(2)}</span>

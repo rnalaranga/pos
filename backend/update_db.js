@@ -61,6 +61,30 @@ async function updateDB() {
       quantity DECIMAL(10,2) NOT NULL DEFAULT 1.00,
       FOREIGN KEY (service_id) REFERENCES products(id) ON DELETE CASCADE,
       FOREIGN KEY (material_id) REFERENCES products(id) ON DELETE CASCADE
+    );`,
+    
+    // Expenses Table
+    `CREATE TABLE IF NOT EXISTS expenses (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      category VARCHAR(100) NOT NULL,
+      amount DECIMAL(12,2) NOT NULL,
+      description TEXT,
+      expense_date DATE NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );`,
+
+    // Bank Deposits Table
+    `CREATE TABLE IF NOT EXISTS bank_deposits (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      bank_name VARCHAR(100) NOT NULL,
+      reference_number VARCHAR(100),
+      amount DECIMAL(12,2) NOT NULL,
+      deposit_date DATE NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
     );`
   ];
 

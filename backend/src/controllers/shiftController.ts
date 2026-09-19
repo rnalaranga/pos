@@ -110,6 +110,18 @@ export const getShiftSummary = async (req: any, res: Response) => {
       [user_id, shift.opening_time, shift.closing_time]
     );
 
+    const [[expenses]]: any = await db.execute(
+      `SELECT COALESCE(SUM(amount), 0) as total FROM expenses 
+       WHERE user_id = ? AND created_at >= ? AND created_at <= COALESCE(?, NOW())`,
+      [user_id, shift.opening_time, shift.closing_time]
+    );
+
+    const [[deposits]]: any = await db.execute(
+      `SELECT COALESCE(SUM(amount), 0) as total FROM bank_deposits 
+       WHERE user_id = ? AND created_at >= ? AND created_at <= COALESCE(?, NOW())`,
+      [user_id, shift.opening_time, shift.closing_time]
+    );
+
     let expected_cash = parseFloat(shift.opening_balance);
     let expected_card = 0;
     let expected_credit = 0;
@@ -121,8 +133,16 @@ export const getShiftSummary = async (req: any, res: Response) => {
       else if (row.payment_method === 'Credit') expected_credit += total;
     }
 
+    const total_expenses = parseFloat(expenses.total || 0);
+    const total_deposits = parseFloat(deposits.total || 0);
+
+    expected_cash -= total_expenses;
+    expected_cash -= total_deposits;
+
     res.json({
       ...shift,
+      total_expenses,
+      total_deposits,
       current_expected_cash: expected_cash,
       current_expected_card: expected_card,
       current_expected_credit: expected_credit

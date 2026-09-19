@@ -55,7 +55,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
 
 export const getShiftSummary = async (req: Request, res: Response) => {
   try {
-    const { date } = req.query; // optional date param, defaults to today
+    const { date } = req.query;
     let targetDate = 'CURDATE()';
     let params: any[] = [];
     
@@ -79,7 +79,23 @@ export const getShiftSummary = async (req: Request, res: Response) => {
       WHERE DATE(created_at) = ${targetDate} AND status = 'Completed'
     `, params);
 
-    res.json(salesSummary);
+    const [[expenses]]: any = await db.execute(`
+      SELECT COALESCE(SUM(amount), 0) as total_expenses 
+      FROM expenses 
+      WHERE expense_date = ${targetDate}
+    `, params);
+
+    const [[deposits]]: any = await db.execute(`
+      SELECT COALESCE(SUM(amount), 0) as total_bank_deposits 
+      FROM bank_deposits 
+      WHERE deposit_date = ${targetDate}
+    `, params);
+
+    res.json({
+      ...salesSummary,
+      total_expenses: expenses.total_expenses,
+      total_bank_deposits: deposits.total_bank_deposits
+    });
   } catch (error) {
     console.error("Shift Summary Error:", error);
     res.status(500).json({ message: 'Server error retrieving shift summary' });
@@ -165,16 +181,40 @@ export const getDailySales = async (req: Request, res: Response) => {
   try {
     const [rows] = await db.execute(`
       SELECT 
-        DATE(created_at) as date,
-        COUNT(id) as total_invoices,
-        COALESCE(SUM(total_amount), 0) as total_sales,
-        COALESCE(SUM(CASE WHEN payment_method = 'Cash' THEN amount_paid ELSE 0 END), 0) as cash_sales,
-        COALESCE(SUM(CASE WHEN payment_method = 'Card' THEN amount_paid ELSE 0 END), 0) as card_sales,
-        COALESCE(SUM(CASE WHEN payment_method = 'Credit' THEN total_amount ELSE 0 END), 0) as credit_sales
-      FROM sales
-      WHERE status = 'Completed'
-      GROUP BY DATE(created_at)
-      ORDER BY date DESC
+        dates.d as date,
+        COALESCE(s.total_invoices, 0) as total_invoices,
+        COALESCE(s.total_sales, 0) as total_sales,
+        COALESCE(s.cash_sales, 0) as cash_sales,
+        COALESCE(s.card_sales, 0) as card_sales,
+        COALESCE(s.credit_sales, 0) as credit_sales,
+        COALESCE(e.total_expenses, 0) as total_expenses,
+        COALESCE(b.total_bank_deposits, 0) as total_bank_deposits
+      FROM (
+        SELECT DISTINCT DATE(created_at) as d FROM sales WHERE status = 'Completed'
+        UNION
+        SELECT DISTINCT expense_date as d FROM expenses
+        UNION
+        SELECT DISTINCT deposit_date as d FROM bank_deposits
+      ) dates
+      LEFT JOIN (
+        SELECT 
+          DATE(created_at) as date,
+          COUNT(id) as total_invoices,
+          SUM(total_amount) as total_sales,
+          SUM(CASE WHEN payment_method = 'Cash' THEN amount_paid ELSE 0 END) as cash_sales,
+          SUM(CASE WHEN payment_method = 'Card' THEN amount_paid ELSE 0 END) as card_sales,
+          SUM(CASE WHEN payment_method = 'Credit' THEN total_amount ELSE 0 END) as credit_sales
+        FROM sales WHERE status = 'Completed' GROUP BY DATE(created_at)
+      ) s ON dates.d = s.date
+      LEFT JOIN (
+        SELECT expense_date as date, SUM(amount) as total_expenses 
+        FROM expenses GROUP BY expense_date
+      ) e ON dates.d = e.date
+      LEFT JOIN (
+        SELECT deposit_date as date, SUM(amount) as total_bank_deposits 
+        FROM bank_deposits GROUP BY deposit_date
+      ) b ON dates.d = b.date
+      ORDER BY dates.d DESC
       LIMIT 30
     `);
     res.json(rows);

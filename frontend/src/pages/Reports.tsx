@@ -193,6 +193,18 @@ const Reports = () => {
                   <span className="text-muted-foreground">Total Discounts Given</span>
                   <span className="font-medium text-destructive">{currencySymbol}{Number(shiftSummary.total_discounts).toFixed(2)}</span>
                 </div>
+                {shiftSummary.total_expenses > 0 && (
+                  <div className="flex justify-between items-center py-1 border-b border-border/50">
+                    <span className="text-muted-foreground">Total Expenses Paid</span>
+                    <span className="font-medium text-destructive">-{currencySymbol}{Number(shiftSummary.total_expenses).toFixed(2)}</span>
+                  </div>
+                )}
+                {shiftSummary.total_bank_deposits > 0 && (
+                  <div className="flex justify-between items-center py-1 border-b border-border/50">
+                    <span className="text-muted-foreground">Total Bank Deposits</span>
+                    <span className="font-medium text-destructive">-{currencySymbol}{Number(shiftSummary.total_bank_deposits).toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center py-1 border-b border-border/50">
                   <span className="text-muted-foreground">Loyalty Points Earned</span>
                   <span className="font-medium text-green-600">+{Number(shiftSummary.total_loyalty_earned)}</span>
@@ -383,6 +395,9 @@ const Reports = () => {
                   <th className="px-6 py-4 font-medium">Date</th>
                   <th className="px-6 py-4 font-medium text-center">Invoices</th>
                   <th className="px-6 py-4 font-medium text-right">Cash Sales</th>
+                  <th className="px-6 py-4 font-medium text-right text-red-600">Expenses</th>
+                  <th className="px-6 py-4 font-medium text-right text-orange-600">Deposits</th>
+                  <th className="px-6 py-4 font-medium text-right text-green-700">Cash on Hand</th>
                   <th className="px-6 py-4 font-medium text-right">Card Sales</th>
                   <th className="px-6 py-4 font-medium text-right text-orange-600">Credit Sales</th>
                   <th className="px-6 py-4 font-medium text-right">Total Sales</th>
@@ -390,18 +405,24 @@ const Reports = () => {
               </thead>
               <tbody>
                 {dailySales.length === 0 ? (
-                  <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">No daily sales found.</td></tr>
+                  <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">No daily sales found.</td></tr>
                 ) : (
-                  dailySales.map((row: any, i: number) => (
+                  dailySales.map((row: any, i: number) => {
+                    const cashOnHand = Number(row.cash_sales) - Number(row.total_expenses || 0) - Number(row.total_bank_deposits || 0);
+                    return (
                     <tr key={i} className="border-b last:border-0 hover:bg-muted/30">
                       <td className="px-6 py-4 font-medium">{new Date(row.date).toLocaleDateString()}</td>
                       <td className="px-6 py-4 text-center">{row.total_invoices}</td>
                       <td className="px-6 py-4 text-right font-semibold text-green-600">{currencySymbol}{Number(row.cash_sales).toFixed(2)}</td>
+                      <td className="px-6 py-4 text-right font-semibold text-red-600">{currencySymbol}{Number(row.total_expenses || 0).toFixed(2)}</td>
+                      <td className="px-6 py-4 text-right font-semibold text-orange-600">{currencySymbol}{Number(row.total_bank_deposits || 0).toFixed(2)}</td>
+                      <td className="px-6 py-4 text-right font-bold text-green-700">{currencySymbol}{cashOnHand.toFixed(2)}</td>
                       <td className="px-6 py-4 text-right font-semibold text-blue-600">{currencySymbol}{Number(row.card_sales).toFixed(2)}</td>
                       <td className="px-6 py-4 text-right font-semibold text-orange-600">{currencySymbol}{Number(row.credit_sales).toFixed(2)}</td>
                       <td className="px-6 py-4 text-right font-bold text-primary">{currencySymbol}{Number(row.total_sales).toFixed(2)}</td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
