@@ -103,11 +103,16 @@ export const createSale = async (req: any, res: Response) => {
         } else {
           // It's a service. Deduct linked materials if any.
           const [materials]: any = await connection.execute(
-            'SELECT material_id, quantity FROM service_materials WHERE service_id = ?',
+            'SELECT material_id, quantity, is_selective FROM service_materials WHERE service_id = ?',
             [item.product_id]
           );
           
           for (const mat of materials) {
+            // Skip selective materials that weren't the one selected for this item
+            if (mat.is_selective && mat.material_id !== item.selected_material_id) {
+              continue;
+            }
+
             const matQty = mat.quantity * item.quantity;
             
             await connection.execute(

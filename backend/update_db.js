@@ -59,10 +59,15 @@ async function updateDB() {
       service_id INT NOT NULL,
       material_id INT NOT NULL,
       quantity DECIMAL(10,2) NOT NULL DEFAULT 1.00,
+      is_selective BOOLEAN DEFAULT FALSE,
+      color_code VARCHAR(10) DEFAULT '#000000',
       FOREIGN KEY (service_id) REFERENCES products(id) ON DELETE CASCADE,
       FOREIGN KEY (material_id) REFERENCES products(id) ON DELETE CASCADE
     );`,
     
+    `ALTER TABLE service_materials ADD COLUMN is_selective BOOLEAN DEFAULT FALSE;`,
+    `ALTER TABLE service_materials ADD COLUMN color_code VARCHAR(10) DEFAULT '#000000';`,
+
     // Expenses Table
     `CREATE TABLE IF NOT EXISTS expenses (
       id INT AUTO_INCREMENT PRIMARY KEY,

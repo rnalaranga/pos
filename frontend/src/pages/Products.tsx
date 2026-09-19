@@ -93,7 +93,7 @@ const Products = () => {
     name: '', barcode: '', sku: '', category_id: '', supplier_id: '',
     purchase_price: 0, selling_price: 0, wholesale_price: 0,
     stock: 0, reorder_level: 5, unit: 'pcs', is_service: false, status: 'Active',
-    materials: [] as {material_id: number, quantity: number}[]
+    materials: [] as {material_id: number, quantity: number, is_selective?: boolean, color_code?: string}[]
   });
 
   const fetchData = async () => {
@@ -510,20 +510,45 @@ const Products = () => {
                                   className="w-full h-9 px-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
                                 />
                               </div>
-                              <div className="pt-5">
-                                <button 
-                                  type="button"
-                                  onClick={() => {
-                                    const newMats = [...formData.materials];
-                                    newMats.splice(index, 1);
-                                    setFormData({...formData, materials: newMats});
-                                  }}
-                                  className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                                  title="Remove Material"
-                                >
-                                  <Trash2 className="w-5 h-5" />
-                                </button>
+                              <div className="flex items-center pt-5 pl-2 gap-2">
+                                <label className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
+                                  <input 
+                                    type="checkbox" 
+                                    checked={mat.is_selective || false} 
+                                    onChange={(e) => {
+                                      const newMats = [...formData.materials];
+                                      newMats[index].is_selective = e.target.checked;
+                                      setFormData({...formData, materials: newMats});
+                                    }}
+                                    className="w-4 h-4 rounded text-primary focus:ring-primary"
+                                  />
+                                  Selective
+                                </label>
+                                {(mat.is_selective) && (
+                                  <input 
+                                    type="color" 
+                                    value={mat.color_code || '#000000'} 
+                                    onChange={(e) => {
+                                      const newMats = [...formData.materials];
+                                      newMats[index].color_code = e.target.value;
+                                      setFormData({...formData, materials: newMats});
+                                    }}
+                                    className="w-8 h-8 rounded cursor-pointer border-0 p-0"
+                                    title="Choose Color"
+                                  />
+                                )}
                               </div>
+                              <button 
+                                type="button" 
+                                onClick={() => {
+                                  const newMats = [...formData.materials];
+                                  newMats.splice(index, 1);
+                                  setFormData({...formData, materials: newMats});
+                                }}
+                                className="mt-5 text-destructive hover:bg-destructive/10 p-2 rounded-lg transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </div>
                           ))}
                           {formData.materials.length === 0 && (

@@ -78,7 +78,7 @@ const POS = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   
   // Item Edit State
-  const [editingItem, setEditingItem] = useState<{ id: number; name: string; sku: string; selling_price: number; quantity: number; discount: number; barcode: string; is_service: boolean; category_id?: number | null; stock: number; } | null>(null);
+  const [editingItem, setEditingItem] = useState<(Product & { quantity: number; discount: number }) | null>(null);
   const qtyInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -87,7 +87,13 @@ const POS = () => {
     }
   }, [editingItem?.id]);
 
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [pendingSelectiveItem, setPendingSelectiveItem] = useState<any>(null);
+
   const handleProductClick = (p: Product) => {
+    // If it's a service with selective materials and NOT yet in cart (or we want a new one)
+    // Wait, if it's already in the cart, we might want to just edit quantity.
+    // For simplicity, we just setEditingItem. We will intercept the add in handleSaveItem.
     const existing = cart.find(c => c.id === p.id);
     if (existing) {
       setEditingItem({ ...existing });
@@ -98,7 +104,16 @@ const POS = () => {
 
   const handleSaveItem = () => {
     if (!editingItem) return;
+
+    // Check if it's a new item and it has selective materials
     const existingIndex = cart.findIndex(c => c.id === editingItem.id);
+    if (existingIndex < 0 && editingItem.is_service && editingItem.materials?.some((m:any) => m.is_selective)) {
+      setPendingSelectiveItem({ ...editingItem });
+      setShowColorPicker(true);
+      setEditingItem(null); // Close the edit modal
+      return;
+    }
+
     if (existingIndex >= 0) {
       updateCartItem(editingItem.id, { 
         quantity: editingItem.quantity, 
@@ -109,6 +124,22 @@ const POS = () => {
       addToCart(editingItem, editingItem.quantity, editingItem.selling_price, editingItem.discount);
     }
     setEditingItem(null);
+    setSearchInput('');
+    setSearchIndex(-1);
+    setFilteredProducts([]);
+  };
+
+  const handleSelectColorAndAdd = (material_id: number) => {
+    if (!pendingSelectiveItem) return;
+    addToCart(
+      pendingSelectiveItem, 
+      pendingSelectiveItem.quantity, 
+      pendingSelectiveItem.selling_price, 
+      pendingSelectiveItem.discount,
+      material_id
+    );
+    setShowColorPicker(false);
+    setPendingSelectiveItem(null);
     setSearchInput('');
     setSearchIndex(-1);
     setFilteredProducts([]);
@@ -1230,6 +1261,40 @@ const POS = () => {
                 className="flex-[2] h-11 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition-colors shadow-sm"
               >
                 Save Item (Enter)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showColorPicker && pendingSelectiveItem && (
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card w-full max-w-sm rounded-2xl shadow-xl border overflow-hidden flex flex-col relative animate-in zoom-in-95 duration-200">
+            <div className="p-5 border-b bg-muted/30 flex justify-between items-center">
+              <h3 className="font-bold text-lg leading-tight">Select Color</h3>
+              <button onClick={() => { setShowColorPicker(false); setPendingSelectiveItem(null); }} className="text-muted-foreground hover:text-foreground">✕</button>
+            </div>
+            <div className="p-5">
+              <p className="text-sm text-muted-foreground mb-4">Please select the color to consume for <b>{pendingSelectiveItem.name}</b>:</p>
+              <div className="flex flex-wrap gap-4 justify-center">
+                {pendingSelectiveItem.materials
+                  .filter((m: any) => m.is_selective)
+                  .map((mat: any) => (
+                    <button
+                      key={mat.material_id}
+                      onClick={() => handleSelectColorAndAdd(mat.material_id)}
+                      className="w-12 h-12 rounded-full shadow-sm border-2 border-border hover:scale-110 hover:border-primary transition-all flex items-center justify-center"
+                      style={{ backgroundColor: mat.color_code || '#000000' }}
+                      title={`Material ID: ${mat.material_id}`}
+                    />
+                  ))}
+              </div>
+            </div>
+            <div className="p-4 bg-muted/30 border-t flex gap-3">
+              <button 
+                onClick={() => { setShowColorPicker(false); setPendingSelectiveItem(null); }}
+                className="w-full h-11 bg-white text-muted-foreground border font-bold rounded-xl hover:bg-slate-50 transition-colors"
+              >
+                Cancel
               </button>
             </div>
           </div>

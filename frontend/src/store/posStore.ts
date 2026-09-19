@@ -12,13 +12,14 @@ export interface Product {
   is_service: boolean;
   category_id?: number | null;
   total_sold?: number;
-  materials?: { material_id: number; quantity: number }[];
+  materials?: { material_id: number; quantity: number; is_selective?: boolean; color_code?: string }[];
 }
 
 export interface CartItem extends Product {
   quantity: number;
   discount: number;
   subtotal: number;
+  selected_material_id?: number;
 }
 
 interface Customer {
@@ -50,7 +51,7 @@ interface PosState {
   fetchProducts: () => Promise<void>;
   setSearchQuery: (query: string) => void;
   setCustomer: (customer: Customer | null) => void;
-  addToCart: (product: Product, qty?: number, priceOverride?: number, discount?: number) => void;
+  addToCart: (product: Product, qty?: number, priceOverride?: number, discount?: number, selected_material_id?: number) => void;
   updateCartItem: (productId: number, updates: Partial<CartItem>) => void;
   removeFromCart: (productId: number) => void;
   setGlobalDiscount: (amount: number) => void;
@@ -125,9 +126,9 @@ export const usePosStore = create<PosState>((set, get) => ({
     });
   },
 
-  addToCart: (product, qty = 1, priceOverride, discount = 0) => {
+  addToCart: (product, qty = 1, priceOverride, discount = 0, selected_material_id) => {
     const { cart, calculateTotals } = get();
-    const existingItemIndex = cart.findIndex(item => item.id === product.id);
+    const existingItemIndex = cart.findIndex(item => item.id === product.id && item.selected_material_id === selected_material_id);
 
     const price = priceOverride !== undefined ? priceOverride : product.selling_price;
 
@@ -147,7 +148,8 @@ export const usePosStore = create<PosState>((set, get) => ({
         selling_price: price,
         quantity: qty,
         discount: discount,
-        subtotal: (price * qty) - discount
+        subtotal: (price * qty) - discount,
+        selected_material_id
       };
       set({ cart: [...cart, newItem] });
     }
@@ -216,6 +218,7 @@ export const usePosStore = create<PosState>((set, get) => ({
         unit_price: item.selling_price,
         discount: item.discount,
         subtotal: item.subtotal,
+        selected_material_id: item.selected_material_id,
         is_service: item.is_service
       }))
     };

@@ -18,7 +18,9 @@ export const getProducts = async (req: Request, res: Response) => {
       ...p,
       materials: materials.filter((m: any) => m.service_id === p.id).map((m: any) => ({
         material_id: m.material_id,
-        quantity: m.quantity
+        quantity: m.quantity,
+        is_selective: m.is_selective,
+        color_code: m.color_code
       }))
     }));
     
@@ -53,8 +55,8 @@ export const createProduct = async (req: Request, res: Response) => {
     if (is_service && materials && materials.length > 0) {
       for (const mat of materials) {
         await db.execute(
-          'INSERT INTO service_materials (service_id, material_id, quantity) VALUES (?, ?, ?)',
-          [productId, mat.material_id, mat.quantity]
+          'INSERT INTO service_materials (service_id, material_id, quantity, is_selective, color_code) VALUES (?, ?, ?, ?, ?)',
+          [productId, mat.material_id, mat.quantity, mat.is_selective || false, mat.color_code || '#000000']
         );
       }
     }
@@ -95,8 +97,8 @@ export const updateProduct = async (req: Request, res: Response) => {
     if (is_service && materials && materials.length > 0) {
       for (const mat of materials) {
         await db.execute(
-          'INSERT INTO service_materials (service_id, material_id, quantity) VALUES (?, ?, ?)',
-          [id, mat.material_id, mat.quantity]
+          'INSERT INTO service_materials (service_id, material_id, quantity, is_selective, color_code) VALUES (?, ?, ?, ?, ?)',
+          [id, mat.material_id, mat.quantity, mat.is_selective || false, mat.color_code || '#000000']
         );
       }
     }
