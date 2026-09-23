@@ -547,6 +547,7 @@ const POS = () => {
       useDialogStore.getState().alert('Message', `Sale completed! Invoice: ${result.invoice_number}`, 1000);
       setShowPayment(false);
       setAmountPaid(0);
+      setPaymentMethod('Cash');
     } catch (error) {
       useDialogStore.getState().alert('Message', "Failed to process sale");
     } finally {

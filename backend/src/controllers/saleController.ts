@@ -263,3 +263,15 @@ export const getSaleById = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+export const updatePaymentMethod = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { payment_method } = req.body;
+  try {
+    await db.execute('UPDATE sales SET payment_method = ? WHERE id = ?', [payment_method, id]);
+    res.json({ message: 'Payment method updated successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error updating payment method' });
+  }
+};

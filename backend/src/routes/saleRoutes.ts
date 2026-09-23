@@ -1,6 +1,6 @@
 import express from 'express';
-import { protect } from '../middlewares/authMiddleware';
-import { createSale, getSales, getSaleById } from '../controllers/saleController';
+import { protect, adminOnly } from '../middlewares/authMiddleware';
+import { createSale, getSales, getSaleById, updatePaymentMethod } from '../controllers/saleController';
 
 const router = express.Router();
 
@@ -10,5 +10,8 @@ router.route('/')
 
 router.route('/:id')
   .get(protect, getSaleById);
+
+router.route('/:id/payment-method')
+  .put(protect, adminOnly, updatePaymentMethod);
 
 export default router;

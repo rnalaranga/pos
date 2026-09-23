@@ -3,6 +3,7 @@ import { useDialogStore } from '../store/dialogStore';
 import { useWindowStore } from '../store/windowStore';
 import { Filter, Download, FileText, Printer, Search } from 'lucide-react';
 import api from '../api/axios';
+import { useAuthStore } from '../store/authStore';
 
 export interface SaleRecord {
   id: number;
@@ -30,9 +31,20 @@ const PAYMENT_COLORS: Record<string, string> = {
 
 const SalesHistory = () => {
   const { openWindow } = useWindowStore();
+  const { user } = useAuthStore();
   const [sales, setSales] = useState<SaleRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [settingsMap, setSettingsMap] = useState<any>({});
+  
+  const updatePaymentMethod = async (saleId: number, method: string) => {
+    try {
+      await api.put(`/sales/${saleId}/payment-method`, { payment_method: method });
+      useDialogStore.getState().alert('Success', 'Payment method updated');
+      fetchSales(); 
+    } catch (error) {
+      useDialogStore.getState().alert('Error', 'Failed to update payment method');
+    }
+  };
 
   // Filters
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
@@ -335,9 +347,26 @@ const SalesHistory = () => {
                       <td className="px-5 py-3 text-xs text-slate-600">{s.cashier_name || 'System'}</td>
                       <td className="px-5 py-3 text-xs text-slate-500">{s.customer_name || 'Walk-in'}</td>
                       <td className="px-5 py-3">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${PAYMENT_COLORS[s.payment_method] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>
-                          {s.payment_method}
-                        </span>
+                        {user?.role === 'admin' ? (
+                          <select 
+                            value={s.payment_method} 
+                            onChange={(e) => {
+                              if (window.confirm(`Change payment method to ${e.target.value}?`)) {
+                                updatePaymentMethod(s.id, e.target.value);
+                              }
+                            }}
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold border outline-none cursor-pointer ${PAYMENT_COLORS[s.payment_method] || 'bg-slate-100 text-slate-600 border-slate-200'}`}
+                          >
+                            <option value="Cash">Cash</option>
+                            <option value="Card">Card</option>
+                            <option value="Credit">Credit</option>
+                            <option value="QR">QR</option>
+                          </select>
+                        ) : (
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${PAYMENT_COLORS[s.payment_method] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                            {s.payment_method}
+                          </span>
+                        )}
                       </td>
                       <td className="px-5 py-3 text-right font-bold text-slate-800 text-sm">{sym} {parseFloat(s.total_amount as any).toFixed(2)}</td>
                       <td className="px-5 py-3 text-center">
