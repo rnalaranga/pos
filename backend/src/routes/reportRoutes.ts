@@ -4,9 +4,9 @@ import { getDashboardStats, getShiftSummary, getAdvancedReports, getFastMovingPr
 
 const router = express.Router();
 
-router.get('/dashboard', protect, managerOrAdmin, getDashboardStats);
+router.get('/dashboard', protect, getDashboardStats);
 router.get('/fast-moving', protect, getFastMovingProducts);
-router.get('/shift', protect, managerOrAdmin, getShiftSummary);
+router.get('/shift', protect, getShiftSummary);
 router.get('/advanced', protect, managerOrAdmin, getAdvancedReports);
 router.get('/daily-sales', protect, managerOrAdmin, getDailySales);
 
