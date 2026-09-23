@@ -31,6 +31,8 @@ const Customers = () => {
   const [ledgerOpen, setLedgerOpen] = useState(false);
   const [activeCustomer, setActiveCustomer] = useState<any>(null);
   const [ledgerData, setLedgerData] = useState<any[]>([]);
+  const [activeLedgerTab, setActiveLedgerTab] = useState<'ledger' | 'invoices'>('ledger');
+  const [customerInvoices, setCustomerInvoices] = useState<any[]>([]);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [paymentRef, setPaymentRef] = useState('');
@@ -136,9 +138,14 @@ const Customers = () => {
 
   const handleOpenLedger = async (cust: any) => {
     setActiveCustomer(cust);
+    setActiveLedgerTab('ledger');
     try {
-      const res = await api.get(`/customers/${cust.id}/ledger`);
-      setLedgerData(res.data);
+      const [ledgerRes, invoicesRes] = await Promise.all([
+        api.get(`/customers/${cust.id}/ledger`),
+        api.get(`/sales?customer_id=${cust.id}`)
+      ]);
+      setLedgerData(ledgerRes.data);
+      setCustomerInvoices(invoicesRes.data);
       setLedgerOpen(true);
     } catch (e) {
       useDialogStore.getState().alert('Error', 'Failed to load ledger');
@@ -659,32 +666,79 @@ const Customers = () => {
             </div>
             
             <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
-              <div className="flex-1 border-r border-border overflow-auto p-4 custom-scrollbar">
-                <h3 className="font-semibold text-lg mb-3">Transaction History</h3>
-                <table className="w-full text-base text-left">
-                  <thead className="bg-muted text-muted-foreground uppercase text-sm">
-                    <tr>
-                      <th className="px-3 py-2">Date</th>
-                      <th className="px-3 py-2">Type</th>
-                      <th className="px-3 py-2">Ref/Notes</th>
-                      <th className="px-3 py-2 text-right">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ledgerData.length === 0 ? (
-                      <tr><td colSpan={4} className="text-center py-4">No transactions</td></tr>
-                    ) : ledgerData.map((row, i) => (
-                      <tr key={i} className="border-b last:border-0 hover:bg-muted/30">
-                        <td className="px-3 py-2">{new Date(row.date).toLocaleString()}</td>
-                        <td className="px-3 py-2 font-medium">
-                          <span className={row.type === 'Invoice' ? 'text-destructive' : 'text-green-600'}>{row.type}</span>
-                        </td>
-                        <td className="px-3 py-2">{row.ref} {row.notes ? `(${row.notes})` : ''}</td>
-                        <td className="px-3 py-2 text-right">{currencySymbol}{Number(row.amount).toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="flex-1 border-r border-border overflow-hidden flex flex-col">
+                <div className="flex border-b border-border bg-muted/10 shrink-0">
+                  <button 
+                    className={`flex-1 py-3 text-center font-semibold text-sm transition-colors ${activeLedgerTab === 'ledger' ? 'border-b-2 border-primary text-primary bg-white' : 'text-muted-foreground hover:bg-muted/30'}`} 
+                    onClick={() => setActiveLedgerTab('ledger')}
+                  >
+                    Credit Ledger
+                  </button>
+                  <button 
+                    className={`flex-1 py-3 text-center font-semibold text-sm transition-colors ${activeLedgerTab === 'invoices' ? 'border-b-2 border-primary text-primary bg-white' : 'text-muted-foreground hover:bg-muted/30'}`} 
+                    onClick={() => setActiveLedgerTab('invoices')}
+                  >
+                    All Invoices
+                  </button>
+                </div>
+                
+                <div className="flex-1 overflow-auto p-4 custom-scrollbar">
+                  {activeLedgerTab === 'ledger' ? (
+                    <div>
+                      <h3 className="font-semibold text-lg mb-3">Credit Ledger History</h3>
+                      <table className="w-full text-base text-left">
+                        <thead className="bg-muted text-muted-foreground uppercase text-sm">
+                          <tr>
+                            <th className="px-3 py-2">Date</th>
+                            <th className="px-3 py-2">Type</th>
+                            <th className="px-3 py-2">Ref/Notes</th>
+                            <th className="px-3 py-2 text-right">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {ledgerData.length === 0 ? (
+                            <tr><td colSpan={4} className="text-center py-4">No transactions</td></tr>
+                          ) : ledgerData.map((row, i) => (
+                            <tr key={i} className="border-b last:border-0 hover:bg-muted/30">
+                              <td className="px-3 py-2">{new Date(row.date).toLocaleString()}</td>
+                              <td className="px-3 py-2 font-medium">
+                                <span className={row.type === 'Invoice' ? 'text-destructive' : 'text-green-600'}>{row.type}</span>
+                              </td>
+                              <td className="px-3 py-2">{row.ref} {row.notes ? `(${row.notes})` : ''}</td>
+                              <td className="px-3 py-2 text-right">{currencySymbol}{Number(row.amount).toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div>
+                      <h3 className="font-semibold text-lg mb-3">All Invoices</h3>
+                      <table className="w-full text-base text-left">
+                        <thead className="bg-muted text-muted-foreground uppercase text-sm">
+                          <tr>
+                            <th className="px-3 py-2">Date</th>
+                            <th className="px-3 py-2">Invoice No</th>
+                            <th className="px-3 py-2">Method</th>
+                            <th className="px-3 py-2 text-right">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {customerInvoices.length === 0 ? (
+                            <tr><td colSpan={4} className="text-center py-4">No invoices found</td></tr>
+                          ) : customerInvoices.map((inv, i) => (
+                            <tr key={i} className="border-b last:border-0 hover:bg-muted/30">
+                              <td className="px-3 py-2">{new Date(inv.created_at).toLocaleString()}</td>
+                              <td className="px-3 py-2 font-medium">{inv.invoice_number}</td>
+                              <td className="px-3 py-2">{inv.payment_method}</td>
+                              <td className="px-3 py-2 text-right font-medium">{currencySymbol}{Number(inv.total_amount).toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="w-full lg:w-[400px] p-6 bg-muted/20 border-l border-border flex flex-col">
