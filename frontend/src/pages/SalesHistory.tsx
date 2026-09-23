@@ -347,7 +347,7 @@ const SalesHistory = () => {
                       <td className="px-5 py-3 text-xs text-slate-600">{s.cashier_name || 'System'}</td>
                       <td className="px-5 py-3 text-xs text-slate-500">{s.customer_name || 'Walk-in'}</td>
                       <td className="px-5 py-3">
-                        {user?.role === 'admin' ? (
+                        {user?.role?.toLowerCase() === 'admin' ? (
                           <select 
                             value={s.payment_method} 
                             onChange={(e) => {
