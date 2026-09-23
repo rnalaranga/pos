@@ -548,6 +548,7 @@ const POS = () => {
       setShowPayment(false);
       setAmountPaid(0);
       setPaymentMethod('Cash');
+      fetchProducts();
     } catch (error) {
       useDialogStore.getState().alert('Message', "Failed to process sale");
     } finally {
