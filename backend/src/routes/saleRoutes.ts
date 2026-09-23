@@ -1,5 +1,5 @@
 import express from 'express';
-import { protect, managerOrAdmin } from '../middlewares/authMiddleware';
+import { protect } from '../middlewares/authMiddleware';
 import { createSale, getSales, getSaleById } from '../controllers/saleController';
 
 const router = express.Router();

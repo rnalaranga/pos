@@ -1,5 +1,5 @@
 import express from 'express';
-import { protect, managerOrAdmin } from '../middlewares/authMiddleware';
+import { protect, adminOnly } from '../middlewares/authMiddleware';
 import { getCustomers, createCustomer, updateCustomer, deleteCustomer, addCustomerPayment, getCustomerLedger, getCustomerAnalytics } from '../controllers/customerController';
 
 const router = express.Router();
@@ -14,8 +14,8 @@ router.route('/analytics')
   .get(protect, getCustomerAnalytics);
 
 router.route('/:id')
-  .put(protect, managerOrAdmin, updateCustomer)
-  .delete(protect, managerOrAdmin, deleteCustomer);
+  .put(protect, updateCustomer)
+  .delete(protect, adminOnly, deleteCustomer);
 
 router.post('/:id/payments', protect, addCustomerPayment);
 router.get('/:id/ledger', protect, getCustomerLedger);

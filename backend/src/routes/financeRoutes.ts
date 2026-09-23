@@ -9,16 +9,16 @@ const router = express.Router();
 
 // Expenses
 router.route('/expenses')
-  .get(protect, managerOrAdmin, getExpenses)
-  .post(protect, managerOrAdmin, createExpense);
+  .get(protect, getExpenses)
+  .post(protect, createExpense);
 
 router.route('/expenses/:id')
   .delete(protect, adminOnly, deleteExpense);
 
 // Bank Deposits
 router.route('/bank-deposits')
-  .get(protect, managerOrAdmin, getBankDeposits)
-  .post(protect, managerOrAdmin, createBankDeposit);
+  .get(protect, getBankDeposits)
+  .post(protect, createBankDeposit);
 
 router.route('/bank-deposits/:id')
   .delete(protect, adminOnly, deleteBankDeposit);

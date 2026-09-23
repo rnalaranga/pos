@@ -1,11 +1,11 @@
 import express from 'express';
-import { protect, managerOrAdmin } from '../middlewares/authMiddleware';
+import { protect } from '../middlewares/authMiddleware';
 import { getInventoryHistory, adjustStock, transferStock } from '../controllers/inventoryController';
 
 const router = express.Router();
 
-router.get('/history', protect, managerOrAdmin, getInventoryHistory);
-router.post('/adjust', protect, managerOrAdmin, adjustStock);
-router.post('/transfer', protect, managerOrAdmin, transferStock);
+router.get('/history', protect, getInventoryHistory);
+router.post('/adjust', protect, adjustStock);
+router.post('/transfer', protect, transferStock);
 
 export default router;
