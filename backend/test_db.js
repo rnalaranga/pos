@@ -8,8 +8,9 @@ async function test() {
     database: process.env.DB_NAME || 'pos_system',
     port: process.env.DB_PORT || 3306
   });
-  const [rows] = await db.execute('SELECT role FROM users LIMIT 1');
-  console.log(rows);
+  const [rows] = await db.query('SELECT is_service FROM products LIMIT 1');
+  console.log(JSON.stringify(rows));
+  console.log(typeof rows[0].is_service);
   process.exit(0);
 }
 test();
